@@ -9,14 +9,9 @@ import {
   pgEnum,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { STATUSES } from "../lib/statuses";
 
-export const applicationStatus = pgEnum("application_status", [
-  "saved",
-  "applied",
-  "interview",
-  "offer",
-  "rejected",
-]);
+export const applicationStatus = pgEnum("application_status", STATUSES);
 
 // Users table
 export const users = pgTable("users", {
