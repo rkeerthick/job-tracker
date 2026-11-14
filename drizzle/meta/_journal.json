@@ -15,6 +15,13 @@
       "when": 1793955975072,
       "tag": "0001_swift_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794472194732,
+      "tag": "0002_aspiring_maddog",
+      "breakpoints": true
     }
   ]
 }
