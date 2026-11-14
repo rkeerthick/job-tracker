@@ -3,17 +3,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { applications } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { parseId } from "@/lib/parse-id";
 import { parseBody } from "@/lib/parse-body";
 import { updateApplicationSchema } from "@/lib/validations/application";
 
 type Ctx = { params: Promise<{ id: string }> };
-
-// Strict: "12" only. Rejects "", "1.5", "1e3", "-1", "abc", "0".
-function parseId(raw: string): number | null {
-  if (!/^\d+$/.test(raw)) return null;
-  const id = Number(raw);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
 
 const badId = () => NextResponse.json({ error: "Invalid id" }, { status: 400 });
 

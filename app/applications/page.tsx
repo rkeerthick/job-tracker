@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { listApplications } from "@/lib/applications";
 import { AddApplicationForm } from "@/components/AddApplicationForm";
 import { StatusSelect } from "@/components/StatusSelect";
+import { LogoutButton } from "@/app/logout-button";
+import { NotesPanel } from "@/components/NotesPanel";
 import { STATUSES } from "@/lib/statuses";
 
 export const metadata: Metadata = {
@@ -16,7 +18,11 @@ const columns = STATUSES; // ["saved","applied","interview","offer","rejected"]
 export default function ApplicationsPage() {
   return (
     <main>
-      <h1>My applications</h1>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1>My applications</h1>
+        {/* Server Action: destroySession() -> redirect("/login") */}
+        <LogoutButton />
+      </header>
       <AddApplicationForm />
       {/* cacheComponents: cookie + DB access must be inside <Suspense> */}
       <Suspense fallback={<p>Loading…</p>}>
@@ -44,6 +50,7 @@ async function Board() {
                 <strong>{a.company}</strong>
                 <div>{a.role}</div>
                 <StatusSelect id={a.id} status={a.status} />
+                <NotesPanel applicationId={a.id} />
               </div>
             ))}
         </section>
