@@ -2,8 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Input";
 
 type Note = { id: number; body: string; createdAt: string };
+
+const noteDate = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
+
+// Notes only render after the user opens the panel (client-side), so local time is safe here.
+function formatNoteDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : noteDate.format(d);
+}
 
 export function NotesPanel({ applicationId }: { applicationId: number }) {
   const router = useRouter();
@@ -105,52 +116,64 @@ export function NotesPanel({ applicationId }: { applicationId: number }) {
   }
 
   return (
-    <div>
-      <button type="button" onClick={toggle} aria-expanded={open}>
+    <div className="flex flex-col gap-2">
+      <Button variant="secondary" size="sm" onClick={toggle} aria-expanded={open}>
         {open ? "Hide notes" : "Notes"}
-      </button>
+      </Button>
 
       {open && (
-        <div>
-          {loading && notes === null && <p>Loading…</p>}
+        <div className="flex flex-col gap-2 border-t border-border pt-2">
+          {loading && notes === null && <p className="text-sm text-muted">Loading…</p>}
           {loadError && (
-            <p role="alert">
-              {loadError} <button type="button" onClick={loadNotes}>Retry</button>
-            </p>
+            <Alert className="flex items-center justify-between gap-2 px-2 py-1.5">
+              {loadError}
+              <Button variant="secondary" size="sm" onClick={loadNotes}>
+                Retry
+              </Button>
+            </Alert>
           )}
 
-          {notes && notes.length === 0 && <p>No notes yet.</p>}
+          {notes && notes.length === 0 && <p className="text-sm text-muted">No notes yet.</p>}
           {notes && notes.length > 0 && (
-            <ul>
+            <ul className="flex flex-col gap-2">
               {notes.map((n) => (
-                <li key={n.id}>
-                  {n.body}{" "}
-                  <button
-                    type="button"
+                <li key={n.id} className="flex items-start justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="whitespace-pre-wrap break-words">{n.body}</p>
+                    <time dateTime={n.createdAt} className="text-xs text-muted">
+                      {formatNoteDate(n.createdAt)}
+                    </time>
+                  </div>
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={() => handleDelete(n.id)}
                     disabled={deletingId !== null}
                     aria-label="Delete note"
+                    className="shrink-0"
                   >
                     {deletingId === n.id ? "…" : "✕"}
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
 
-          <form onSubmit={handleAdd}>
-            <textarea
+          <form onSubmit={handleAdd} className="flex flex-col gap-2">
+            <Textarea
+              aria-label="Add a note"
               placeholder="Add a note"
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={2000}
               required
+              className="min-h-16"
             />
-            <button type="submit" disabled={submitting}>
+            <Button type="submit" size="sm" disabled={submitting}>
               {submitting ? "Adding…" : "Add note"}
-            </button>
+            </Button>
           </form>
-          {error && <p role="alert">{error}</p>}
+          {error && <Alert className="px-2 py-1.5">{error}</Alert>}
         </div>
       )}
     </div>
