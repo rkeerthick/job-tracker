@@ -4,7 +4,7 @@ import { applications } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { listApplications } from "@/lib/applications";
 import { parseBody } from "@/lib/parse-body";
-import { createApplicationSchema } from "@/lib/validations/application";
+import { createApplicationSchema } from "@/lib/validation";
 
 export async function GET() {
   const { user, error: authError } = await requireUser();
