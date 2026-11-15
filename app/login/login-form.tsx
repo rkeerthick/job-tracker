@@ -1,6 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { login, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
@@ -10,42 +13,28 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Email</span>
-        <input
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          defaultValue={state.email}
-          className="rounded border px-3 py-2"
-        />
-      </label>
+      <Input
+        label="Email"
+        name="email"
+        type="email"
+        required
+        autoComplete="email"
+        defaultValue={state.email}
+      />
+      <Input
+        label="Password"
+        name="password"
+        type="password"
+        required
+        autoComplete="current-password"
+      />
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Password</span>
-        <input
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="rounded border px-3 py-2"
-        />
-      </label>
+      {/* One generic message for any failure: don't reveal which part was wrong. */}
+      {state.error && <Alert>{state.error}</Alert>}
 
-      {state.error && (
-        <p role="alert" className="text-sm text-red-600">
-          {state.error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Logging in…" : "Log in"}
-      </button>
+      </Button>
     </form>
   );
 }

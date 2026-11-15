@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
+/* Design tokens: one dark theme, one accent colour. Use these (via the Tailwind
+   classes below) instead of hard-coded colours in components. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0a0a; /* page background */
+  --surface: #141414; /* cards, panels, inputs */
+  --border: #262626;
+  --text: #ededed;
+  --muted: #a3a3a3; /* secondary text */
+  --accent: #6063ee; /* the only accent: button fills, focus, borders. Darkened a hair from #6366f1 so white text on it is >= 4.5:1 */
+  --accent-text: #818cf8; /* lighter shade of the same accent, for accent-coloured TEXT on dark backgrounds */
+  --accent-fg: #ffffff; /* text on top of --accent */
+  --danger: #f87171; /* error text and borders (>= 4.5:1 on all surfaces). Semantic only, not a second accent */
+  --danger-solid: #dc2626; /* fill for destructive buttons (white text on it >= 4.5:1) */
+
+  /* Status colours: muted, used ONLY as the 2px top border of board columns.
+     They label a pipeline stage; they are not accents (there is still one accent). */
+  --status-saved: #525252;
+  --status-applied: #3b6ea5;
+  --status-interview: #a8812f;
+  --status-offer: #3f8f5f;
+  --status-rejected: #8f4a4a;
+
+  color-scheme: dark; /* dark scrollbars and form controls */
 }
 
+/* Tailwind utilities: bg-bg, bg-surface, border-border, text-text, text-muted,
+   bg-accent, text-accent-text, text-accent-fg, ring-accent, bg-danger-solid ... */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-danger-solid: var(--danger-solid);
+  --color-status-saved: var(--status-saved);
+  --color-status-applied: var(--status-applied);
+  --color-status-interview: var(--status-interview);
+  --color-status-offer: var(--status-offer);
+  --color-status-rejected: var(--status-rejected);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  /* Tailwind v4 borders default to currentColor; make them use the token. */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, sans-serif;
 }

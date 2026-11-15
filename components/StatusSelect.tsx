@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Alert } from "@/components/ui/Alert";
 import { STATUSES, type Status } from "@/lib/statuses";
 
 export function StatusSelect({ id, status }: { id: number; status: Status }) {
@@ -40,15 +41,21 @@ export function StatusSelect({ id, status }: { id: number; status: Status }) {
   }
 
   return (
-    <>
-      <select value={status} onChange={handleChange} disabled={saving}>
+    <div className="flex flex-col gap-1">
+      <select
+        value={status}
+        onChange={handleChange}
+        disabled={saving}
+        aria-label="Status"
+        className="w-full rounded-md border border-border bg-surface px-2 py-1 text-sm capitalize text-text outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+      >
         {STATUSES.map((s) => (
           <option key={s} value={s}>
             {s}
           </option>
         ))}
       </select>
-      {error && <p role="alert">{error}</p>}
-    </>
+      {error && <Alert className="px-2 py-1 text-xs">{error}</Alert>}
+    </div>
   );
 }

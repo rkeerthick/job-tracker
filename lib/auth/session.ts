@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 import { SESSION_COOKIE } from "./constants";
@@ -30,6 +30,8 @@ export async function createSession(userId: number): Promise<void> {
   });
 }
 
+// Expiry is compared with the database clock (now()), not new Date(): Next's prerender
+// check rejects new Date() in render code, and one clock avoids app/DB skew.
 /**
  * Returns the logged-in user (without passwordHash) or null.
  * Wrapped in React `cache` so multiple calls within one request hit the DB once.
@@ -43,7 +45,7 @@ export const getCurrentUser = cache(async () => {
     .select({ id: users.id, email: users.email, createdAt: users.createdAt })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())))
+    .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, sql`now()`)))
     .limit(1);
 
   return row ?? null;

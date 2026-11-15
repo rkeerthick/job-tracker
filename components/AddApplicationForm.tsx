@@ -2,6 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export function AddApplicationForm() {
   const router = useRouter();
@@ -47,28 +50,35 @@ export function AddApplicationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        placeholder="Company"
-        value={company}
-        onChange={(e) => setCompany(e.target.value)}
-        required
-      />
-      <input
-        placeholder="Role"
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-        required
-      />
-      <input
-        placeholder="Link (optional)"
-        value={link}
-        onChange={(e) => setLink(e.target.value)}
-      />
-      <button type="submit" disabled={submitting}>
-        {submitting ? "Adding…" : "Add"}
-      </button>
-      {error && <p role="alert">{error}</p>}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Input
+          label="Company"
+          placeholder="Acme"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+          required
+        />
+        <Input
+          label="Role"
+          placeholder="Frontend Developer"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          required
+        />
+        <Input
+          label="Link (optional)"
+          placeholder="https://…"
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Adding…" : "Add application"}
+        </Button>
+        {error && <Alert className="flex-1 py-1.5">{error}</Alert>}
+      </div>
     </form>
   );
 }
