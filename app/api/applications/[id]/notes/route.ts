@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { applications, notes } from "@/db/schema";
+import { internalError } from "@/lib/api-error";
 import { requireUser } from "@/lib/auth";
 import { parseId } from "@/lib/parse-id";
 import { parseBody } from "@/lib/parse-body";
@@ -24,39 +25,53 @@ async function ownsApplication(applicationId: number, userId: number): Promise<b
 }
 
 export async function GET(_req: Request, { params }: Ctx) {
-  const { user, error: authError } = await requireUser();
-  if (authError) return authError;
+  const route = "GET /api/applications/[id]/notes";
+  let userId: number | undefined;
+  try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+    userId = user.id;
 
-  const applicationId = parseId((await params).id);
-  if (applicationId === null) return badId();
-  if (!(await ownsApplication(applicationId, user.id))) return notFound();
+    const applicationId = parseId((await params).id);
+    if (applicationId === null) return badId();
+    if (!(await ownsApplication(applicationId, user.id))) return notFound();
 
-  const rows = await db
-    .select()
-    .from(notes)
-    .where(eq(notes.applicationId, applicationId))
-    .orderBy(desc(notes.createdAt), desc(notes.id));
+    const rows = await db
+      .select()
+      .from(notes)
+      .where(eq(notes.applicationId, applicationId))
+      .orderBy(desc(notes.createdAt), desc(notes.id));
 
-  return NextResponse.json(rows);
+    return NextResponse.json(rows);
+  } catch (err) {
+    return internalError("list notes failed", { route, userId }, err);
+  }
 }
 
 export async function POST(req: Request, { params }: Ctx) {
-  const { user, error: authError } = await requireUser();
-  if (authError) return authError;
+  const route = "POST /api/applications/[id]/notes";
+  let userId: number | undefined;
+  try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+    userId = user.id;
 
-  const applicationId = parseId((await params).id);
-  if (applicationId === null) return badId();
+    const applicationId = parseId((await params).id);
+    if (applicationId === null) return badId();
 
-  // Ownership first, so a non-owner gets 404 whether or not the body is valid.
-  if (!(await ownsApplication(applicationId, user.id))) return notFound();
+    // Ownership first, so a non-owner gets 404 whether or not the body is valid.
+    if (!(await ownsApplication(applicationId, user.id))) return notFound();
 
-  const { data, error: bodyError } = await parseBody(req, noteSchema);
-  if (bodyError) return bodyError;
+    const { data, error: bodyError } = await parseBody(req, noteSchema);
+    if (bodyError) return bodyError;
 
-  const [created] = await db
-    .insert(notes)
-    .values({ applicationId, body: data.body })
-    .returning();
+    const [created] = await db
+      .insert(notes)
+      .values({ applicationId, body: data.body })
+      .returning();
 
-  return NextResponse.json(created, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
+  } catch (err) {
+    return internalError("create note failed", { route, userId }, err);
+  }
 }

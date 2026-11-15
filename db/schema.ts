@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 import { STATUSES } from "../lib/statuses";
 
@@ -37,7 +38,12 @@ export const applications = pgTable("applications", {
   status: applicationStatus("status").default("applied").notNull(),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+},
+  (table) => [
+    // WHERE user_id = ? ORDER BY created_at DESC LIMIT n: filter + order from one index
+    index("applications_user_created_idx").on(table.userId, table.createdAt),
+  ]
+);
 
 // Notes table
 export const notes = pgTable("notes", {

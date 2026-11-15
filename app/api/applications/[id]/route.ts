@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { applications } from "@/db/schema";
+import { internalError } from "@/lib/api-error";
 import { requireUser } from "@/lib/auth";
 import { parseId } from "@/lib/parse-id";
 import { parseBody } from "@/lib/parse-body";
@@ -20,50 +21,71 @@ const owned = (id: number, userId: number) =>
   and(eq(applications.id, id), eq(applications.userId, userId));
 
 export async function GET(_req: Request, { params }: Ctx) {
-  const { user, error: authError } = await requireUser();
-  if (authError) return authError;
+  const route = "GET /api/applications/[id]";
+  let userId: number | undefined;
+  try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+    userId = user.id;
 
-  const id = parseId((await params).id);
-  if (id === null) return badId();
+    const id = parseId((await params).id);
+    if (id === null) return badId();
 
-  const [row] = await db.select().from(applications).where(owned(id, user.id)).limit(1);
-  if (!row) return notFound();
+    const [row] = await db.select().from(applications).where(owned(id, user.id)).limit(1);
+    if (!row) return notFound();
 
-  return NextResponse.json(row);
+    return NextResponse.json(row);
+  } catch (err) {
+    return internalError("get application failed", { route, userId }, err);
+  }
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
-  const { user, error: authError } = await requireUser();
-  if (authError) return authError;
+  const route = "PATCH /api/applications/[id]";
+  let userId: number | undefined;
+  try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+    userId = user.id;
 
-  const id = parseId((await params).id);
-  if (id === null) return badId();
+    const id = parseId((await params).id);
+    if (id === null) return badId();
 
-  const { data, error: bodyError } = await parseBody(req, updateApplicationSchema);
-  if (bodyError) return bodyError;
+    const { data, error: bodyError } = await parseBody(req, updateApplicationSchema);
+    if (bodyError) return bodyError;
 
-  const [updated] = await db
-    .update(applications)
-    .set(data)
-    .where(owned(id, user.id))
-    .returning();
-  if (!updated) return notFound();
+    const [updated] = await db
+      .update(applications)
+      .set(data)
+      .where(owned(id, user.id))
+      .returning();
+    if (!updated) return notFound();
 
-  return NextResponse.json(updated);
+    return NextResponse.json(updated);
+  } catch (err) {
+    return internalError("update application failed", { route, userId }, err);
+  }
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
-  const { user, error: authError } = await requireUser();
-  if (authError) return authError;
+  const route = "DELETE /api/applications/[id]";
+  let userId: number | undefined;
+  try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+    userId = user.id;
 
-  const id = parseId((await params).id);
-  if (id === null) return badId();
+    const id = parseId((await params).id);
+    if (id === null) return badId();
 
-  const [deleted] = await db
-    .delete(applications)
-    .where(owned(id, user.id))
-    .returning({ id: applications.id });
-  if (!deleted) return notFound();
+    const [deleted] = await db
+      .delete(applications)
+      .where(owned(id, user.id))
+      .returning({ id: applications.id });
+    if (!deleted) return notFound();
 
-  return NextResponse.json({ id: deleted.id });
+    return NextResponse.json({ id: deleted.id });
+  } catch (err) {
+    return internalError("delete application failed", { route, userId }, err);
+  }
 }
