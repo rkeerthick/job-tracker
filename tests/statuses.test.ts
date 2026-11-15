@@ -7,8 +7,3 @@ describe("STATUSES", () => {
     expect([...STATUSES]).toEqual(["saved", "applied", "interview", "offer", "rejected"]);
   });
 });
-
-// DELIBERATELY FAILING: proves CI turns the PR red and blocks the merge. Reverted in the next commit.
-it("deliberately failing test (CI proof)", () => {
-  expect(STATUSES.length).toBe(6);
-});
