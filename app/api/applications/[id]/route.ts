@@ -5,7 +5,7 @@ import { applications } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { parseId } from "@/lib/parse-id";
 import { parseBody } from "@/lib/parse-body";
-import { updateApplicationSchema } from "@/lib/validations/application";
+import { updateApplicationSchema } from "@/lib/validation";
 
 type Ctx = { params: Promise<{ id: string }> };
 

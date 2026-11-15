@@ -5,7 +5,7 @@ import { applications, notes } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { parseId } from "@/lib/parse-id";
 import { parseBody } from "@/lib/parse-body";
-import { createNoteSchema } from "@/lib/validations/note";
+import { noteSchema } from "@/lib/validation";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -50,7 +50,7 @@ export async function POST(req: Request, { params }: Ctx) {
   // Ownership first, so a non-owner gets 404 whether or not the body is valid.
   if (!(await ownsApplication(applicationId, user.id))) return notFound();
 
-  const { data, error: bodyError } = await parseBody(req, createNoteSchema);
+  const { data, error: bodyError } = await parseBody(req, noteSchema);
   if (bodyError) return bodyError;
 
   const [created] = await db

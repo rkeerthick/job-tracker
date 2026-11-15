@@ -1,19 +1,13 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 import { SESSION_COOKIE } from "./constants";
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+import { hashToken } from "./token";
 
-// The raw token lives only in the cookie; the DB stores its SHA-256 hash,
-// so a leaked sessions table can't be used to hijack sessions.
-// SHA-256 (not bcrypt) because the token is already 256 bits of randomness
-// and we need a deterministic hash to look it up by index.
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /** Must be called from a Server Function or Route Handler (cookies can't be set while rendering). */
 export async function createSession(userId: number): Promise<void> {

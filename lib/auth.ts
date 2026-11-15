@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 
+// Pure helper lives in its own file so tests can import it without loading the DB.
+export { hashToken } from "@/lib/auth/token";
+
 export type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
 type RequireUserResult =
@@ -14,7 +17,7 @@ type RequireUserResult =
  *   if (error) return error;
  *   // `user` is non-null from here on
  *
- * This is the real check (DB-backed session lookup) — don't rely on proxy.ts.
+ * This is the real check (DB-backed session lookup) â€” don't rely on proxy.ts.
  */
 export async function requireUser(): Promise<RequireUserResult> {
   const user = await getCurrentUser();
