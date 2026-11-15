@@ -9,7 +9,10 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "db:smoke": "tsx --env-file=.env.local scripts/db-smoke-test.ts"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:smoke": "tsx --env-file=.env.local scripts/db-smoke-test.ts",
+    "db:seed-perf": "tsx scripts/seed-perf.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
