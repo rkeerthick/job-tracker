@@ -1,0 +1,15 @@
+Backend Developer - Python
+Zenith Systems Pvt Ltd
+
+Location: Chennai
+Experience: 2-4 years
+Salary: Not disclosed by recruiter
+Employment type: Full time, Permanent
+
+Job description:
+Zenith Systems is hiring a Backend Developer to design and maintain REST APIs.
+You will work with Django, PostgreSQL and Redis, and write unit tests.
+
+Role: Software Developer
+Industry Type: IT Services
+Education: B.Tech/B.E. in Computer Science

@@ -1,0 +1,16 @@
+Acme Technologies
+Senior Frontend Engineer
+Bengaluru, Karnataka, India (Hybrid)
+
+About the job
+We are looking for a Senior Frontend Engineer to build our customer dashboard used by 50,000+ businesses.
+
+Compensation: ₹25,00,000 - ₹35,00,000 per year
+
+Requirements
+- 5+ years of experience with React and TypeScript
+- Experience with Next.js and GraphQL
+- Familiarity with Jest and Cypress for testing
+Nice to have: AWS, Docker
+
+Benefits: health insurance, flexible hours, learning budget.

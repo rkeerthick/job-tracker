@@ -19,7 +19,7 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1794472194732,
+      "when": 1794021184269,
       "tag": "0002_aspiring_maddog",
       "breakpoints": true
     },
@@ -28,6 +28,20 @@
       "version": "7",
       "when": 1794751438443,
       "tag": "0003_red_shen",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794932318231,
+      "tag": "0004_faithful_the_enforcers",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794933956310,
+      "tag": "0005_tough_violations",
       "breakpoints": true
     }
   ]
