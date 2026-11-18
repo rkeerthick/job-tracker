@@ -34,8 +34,14 @@ export const applications = pgTable("applications", {
   role: varchar("role", { length: 255 }).notNull(),
   link: text("link"),
 
+  // Filled later by posting extraction / chat features. All nullable: existing rows stay valid.
+  location: varchar("location", { length: 255 }),
+  salaryText: varchar("salary_text", { length: 255 }), // free text: "₹12–18 LPA", "$120k–150k", ...
+  skills: text("skills").array(),
+  interviewAt: timestamp("interview_at", { withTimezone: true }),
+
   appliedAt: timestamp("applied_at", { withTimezone: true }),
-  status: applicationStatus("status").default("applied").notNull(),
+  status: applicationStatus("status").default("saved").notNull(),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 },

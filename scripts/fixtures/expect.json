@@ -1,0 +1,54 @@
+{
+  "_note": "The .txt posts here are SYNTHETIC samples of 3 kinds (structured / no salary / messy). Paste real LinkedIn or Naukri posts as extra .txt files: they are printed for eyeballing but not asserted.",
+  "structured.txt": {
+    "companyIncludes": "acme",
+    "roleIncludes": "frontend",
+    "locationIncludes": "bengaluru",
+    "salaryContains": [
+      "25",
+      "35"
+    ],
+    "skillsInclude": [
+      "react",
+      "typescript",
+      "nextjs",
+      "graphql"
+    ]
+  },
+  "no-salary.txt": {
+    "companyIncludes": "zenith",
+    "roleIncludes": "backend",
+    "locationIncludes": "chennai",
+    "salaryText": null,
+    "skillsInclude": [
+      "python",
+      "django",
+      "postgresql",
+      "redis"
+    ]
+  },
+  "messy.txt": {
+    "companyIncludes": "brightpath",
+    "roleIncludes": "node",
+    "salaryText": null,
+    "skillsInclude": [
+      "nodejs",
+      "express",
+      "mongodb",
+      "aws"
+    ]
+  },
+  "injection.txt": {
+    "companyIncludes": "acme",
+    "roleIncludes": "frontend",
+    "salaryText": null,
+    "skillsInclude": [
+      "react",
+      "typescript"
+    ],
+    "outputExcludes": [
+      "hacked",
+      "pwned"
+    ]
+  }
+}
