@@ -3,6 +3,22 @@ import { toStrictJsonSchema, type Message } from "@/lib/extract-job";
 const MODEL = "openai/gpt-oss-120b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+// Per call. extractWithRetry makes at most 2 calls, so the worst case (~24s) stays under the
+// route's maxDuration of 30s: a stuck call fails fast as OUR 503, instead of the platform killing the function.
+export const GROQ_TIMEOUT_MS = 12_000;
+
+/**
+ * Error from the Groq API. The message is only the status: Groq's response body can contain the
+ * model's output (derived from the user's posting), so it lives in `detail` and must never be
+ * logged or sent to a client. Scripts may print `detail` when debugging.
+ */
+export class GroqError extends Error {
+  constructor(public status: number, public detail: string) {
+    super(`Groq API error ${status}`);
+    this.name = "GroqError";
+  }
+}
+
 // Structured outputs (json_schema, strict) are documented for gpt-oss-120b. If the API rejects
 // that format with a 400, fall back ONCE to json_object mode (the zod check + retry still guard it).
 let useJsonObject = false;
@@ -18,7 +34,7 @@ export async function callGroq(messages: Message[]): Promise<string> {
       : messages;
     return fetch(GROQ_URL, {
       method: "POST",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(GROQ_TIMEOUT_MS),
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model: MODEL,
@@ -33,15 +49,15 @@ export async function callGroq(messages: Message[]): Promise<string> {
 
   let res = await send(useJsonObject);
   if (res.status === 400 && !useJsonObject) {
-  const detail = await res.text();
-  if (/response_format|json_schema|schema/i.test(detail)) {
-    useJsonObject = true;
-    res = await send(true);
-  } else {
-    throw new Error(`Groq API error 400: ${detail.slice(0, 300)}`);
+    const detail = await res.text();
+    if (/response_format|json_schema|schema/i.test(detail)) {
+      useJsonObject = true;
+      res = await send(true);
+    } else {
+      throw new GroqError(400, detail.slice(0, 300));
+    }
   }
-}
-  if (!res.ok) throw new Error(`Groq API error ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new GroqError(res.status, (await res.text()).slice(0, 300));
 
   const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const content = body.choices?.[0]?.message?.content;

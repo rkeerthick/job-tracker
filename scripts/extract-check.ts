@@ -10,7 +10,7 @@ config({ path: ".env.local" });
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractWithRetry, type ExtractResult } from "../lib/extract-job";
-import { callGroq, groqMode, withBrokenFirstCall } from "../lib/groq";
+import { callGroq, GroqError, groqMode, withBrokenFirstCall } from "../lib/groq";
 
 type Expect = {
   companyIncludes?: string; roleIncludes?: string; locationIncludes?: string;
@@ -89,4 +89,4 @@ ${failed ? `${failed} check(s) FAILED` : "All selected checks passed"}`);
   process.exit(failed ? 1 : 0);
 }
 
-main().catch((e) => { console.error(e instanceof Error ? e.message : e); process.exit(2); });
+main().catch((e) => { console.error(e instanceof Error ? e.message : e, e instanceof GroqError ? e.detail : ""); process.exit(2); });

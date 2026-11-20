@@ -22,8 +22,8 @@ export function ApplicationCard({ app }: { app: Application }) {
     <Card className="flex flex-col gap-2 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="break-words font-semibold">{app.company}</p>
-          <p className="break-words text-sm text-muted">{app.role}</p>
+          <p className="wrap-break-word font-semibold">{app.company}</p>
+          <p className="wrap-break-word text-sm text-muted">{app.role}</p>
         </div>
 
         {app.link && isHttpUrl(app.link) && (
@@ -42,6 +42,12 @@ export function ApplicationCard({ app }: { app: Application }) {
           </a>
         )}
       </div>
+
+      {(app.location || app.salaryText) && (
+        <p className="wrap-break-word text-xs text-muted">
+          {[app.location, app.salaryText].filter(Boolean).join(" · ")}
+        </p>
+      )}
 
       <p className="text-xs text-muted">
         {dateLabel} {dateFormat.format(date)}

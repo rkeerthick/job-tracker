@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXTRACTION_SYSTEM_PROMPT, extractionSchema } from "@/lib/extraction";
+import { EXTRACTION_SYSTEM_PROMPT, extractionSchema, isUnreadable } from "@/lib/extraction";
 
 const full = {
   company: "Acme",
@@ -27,10 +27,21 @@ describe("extractionSchema", () => {
     expect(extractionSchema.safeParse(withoutLocation).success).toBe(false);
   });
 
-  it("rejects a missing or empty company or role", () => {
+  it("accepts null company/role (the model must say null instead of inventing a placeholder)", () => {
+    expect(extractionSchema.safeParse({ ...full, company: null, role: null }).success).toBe(true);
+  });
+
+  it("rejects an empty or missing company or role: use null, not \"\" or an omitted key", () => {
     expect(extractionSchema.safeParse({ ...full, company: "" }).success).toBe(false);
     expect(extractionSchema.safeParse({ ...full, role: "   " }).success).toBe(false);
     expect(extractionSchema.safeParse({ ...full, company: undefined }).success).toBe(false);
+  });
+
+  it("isUnreadable: only when BOTH company and role are null", () => {
+    expect(isUnreadable({ ...full, company: null, role: null })).toBe(true);
+    expect(isUnreadable({ ...full, company: null })).toBe(false);
+    expect(isUnreadable({ ...full, role: null })).toBe(false);
+    expect(isUnreadable(full)).toBe(false);
   });
 
   it("rejects a salary that isn't a string or null (e.g. a bare number)", () => {
@@ -61,6 +72,10 @@ describe("EXTRACTION_SYSTEM_PROMPT", () => {
   it("takes the role from the job title, and skills from anywhere including the title", () => {
     expect(EXTRACTION_SYSTEM_PROMPT).toMatch(/role: the job title/i);
     expect(EXTRACTION_SYSTEM_PROMPT).toMatch(/including the title/i);
+  });
+
+  it("forbids placeholder values like 'Not specified'", () => {
+    expect(EXTRACTION_SYSTEM_PROMPT).toMatch(/placeholder/i);
   });
 
   it("treats 'not disclosed' style salaries as null", () => {
