@@ -7,6 +7,6 @@ import { getCurrentUser } from "@/lib/auth/session";
  * that keeps the rest of the page prerenderable.
  */
 export async function RedirectIfAuthed() {
-  if (await getCurrentUser()) redirect("/");
+  if (await getCurrentUser()) redirect("/applications");
   return null;
 }
