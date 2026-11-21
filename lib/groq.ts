@@ -1,3 +1,4 @@
+import type { ChatMessage, ModelReply, ToolSpec } from "@/lib/chat";
 import { toStrictJsonSchema, type Message } from "@/lib/extract-job";
 
 const MODEL = "openai/gpt-oss-120b";
@@ -75,4 +76,32 @@ export function withBrokenFirstCall(call: (m: Message[]) => Promise<string>) {
     }
     return call(m);
   };
+}
+
+/**
+ * Chat with tools. Separate from callGroq: Groq does not combine tool use with structured outputs
+ * (json_schema), so this call sends `tools` and returns the whole assistant message (tool_calls included).
+ */
+export async function callGroqChat(messages: ChatMessage[], tools: ToolSpec[]): Promise<ModelReply> {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY is missing. Add it to .env.local.");
+
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    signal: AbortSignal.timeout(GROQ_TIMEOUT_MS),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0,
+      messages,
+      tools: tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } })),
+      tool_choice: "auto",
+    }),
+  });
+  if (!res.ok) throw new GroqError(res.status, (await res.text()).slice(0, 300));
+
+  const body = (await res.json()) as { choices?: { message?: ModelReply }[] };
+  const message = body.choices?.[0]?.message;
+  if (!message) throw new Error("Groq returned no message.");
+  return { content: message.content ?? null, tool_calls: message.tool_calls };
 }
