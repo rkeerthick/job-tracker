@@ -6,5 +6,7 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: "node",
+    // Dummy URL so modules that import "@/db" can load. Tests build SQL but never connect to a database.
+    env: { DATABASE_URL: "postgresql://user:pass@localhost/db" },
   },
 });

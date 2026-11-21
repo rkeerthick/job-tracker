@@ -13,6 +13,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:smoke": "tsx --env-file=.env.local scripts/db-smoke-test.ts",
     "extract": "tsx scripts/extract.ts",
+    "chat:check": "tsx --env-file=.env.local scripts/chat-check.ts",
+    "tools:check": "tsx --env-file=.env.local scripts/tools-check.ts",
     "extract:check": "tsx scripts/extract-check.ts",
     "db:seed-perf": "tsx scripts/seed-perf.ts"
   },
