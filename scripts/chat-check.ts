@@ -4,19 +4,28 @@
  *   npm run chat:check -- you@example.com "Which interviews do I have next week?"   (real database, read-only)
  *   npm run chat:check -- --matrix                                                  (6 test cases, in-memory data)
  */
-import { runChat, type ChatModel, type ChatOutcome } from "../lib/chat";
-import { callGroqChat, GroqError } from "../lib/groq";
+import { runChat, type ChatEvent, type ChatModel, type ChatOutcome } from "../lib/chat";
+import { callGroqChat, callGroqChatStream, GroqError } from "../lib/groq";
+import { createChatStream, type ChatStreamEvent } from "../lib/chat-stream";
 import { createFakeTools, hideLimits, baseRows, type FakeRow } from "./chat-fixtures";
 import { formatIST } from "../lib/tools/time";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const STREAM = process.argv.includes("--stream");
+const NL = String.fromCharCode(10);
+
+// --stream: each model call streams, and tokens reach us as `token` events from runChat's onEvent.
+const baseModel: ChatModel = STREAM
+  ? (messages, tools, onToken) => callGroqChatStream(messages, tools, onToken ?? (() => {}))
+  : (messages, tools) => callGroqChat(messages, tools);
+
 // Groq's free tier limits tokens per minute (TPM). On 429, wait as long as Groq says, then retry.
 // Only this script does this: in the app a 429 should surface as the friendly 503.
-const callWithRetry: ChatModel = async (messages, tools) => {
+const callWithRetry: ChatModel = async (messages, tools, onToken) => {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await callGroqChat(messages, tools);
+      return await baseModel(messages, tools, onToken);
     } catch (e) {
       if (!(e instanceof GroqError) || e.status !== 429 || attempt >= 4) throw e;
       const secs = Number(e.detail.match(/try again in ([0-9.]+)s/i)?.[1] ?? 10);
@@ -25,6 +34,41 @@ const callWithRetry: ChatModel = async (messages, tools) => {
     }
   }
 };
+
+/**
+ * Prints every ChatEvent with the time since the run started, so you can SEE streaming: tokens
+ * appear one after another with growing timestamps instead of all at once. Also records the
+ * events, so the matrix can assert on them.
+ */
+function makeEventPrinter() {
+  const t0 = Date.now();
+  const at = () => `+${String(Date.now() - t0).padStart(5)}ms`;
+  const events: ChatEvent[] = [];
+  let onTokenLine = false; // true while a run of tokens is being printed on one line
+  let tokens = 0, firstTokenAt = 0, lastTokenAt = 0;
+
+  return {
+    events,
+    onEvent(e: ChatEvent) {
+      events.push(e);
+      if (e.type === "token") {
+        const now = Date.now() - t0;
+        if (!onTokenLine) { process.stdout.write(`  ${at()} token        `); onTokenLine = true; }
+        if (tokens === 0) firstTokenAt = now;
+        tokens++;
+        lastTokenAt = now;
+        process.stdout.write(e.text);
+        return;
+      }
+      if (onTokenLine) { process.stdout.write(NL); onTokenLine = false; }
+      if (e.type === "tool_start") console.log(`  ${at()} tool_start   ${e.tool}`);
+      else if (e.type === "tool_result") console.log(`  ${at()} tool_result  ${e.tool} -> ${e.count === null ? "ERROR" : `${e.count} result(s)`}`);
+      else console.log(`  ${at()} done`);
+    },
+    summary: () => `  streaming: ${tokens} token event(s)${tokens > 0 ? `, first at +${firstTokenAt}ms, last at +${lastTokenAt}ms (spread ${lastTokenAt - firstTokenAt}ms)` : ""}`,
+    tokenText: () => events.flatMap((e) => (e.type === "token" ? [e.text] : [])).join(""),
+  };
+}
 
 function printTrace(question: string, o: ChatOutcome) {
   console.log(`\nQ: ${question}`);
@@ -159,11 +203,21 @@ async function runMatrix(): Promise<boolean> {
     const base = createFakeTools(rows, 1, () => now);
     const tools = c.hideLimits ? hideLimits(base) : base;
 
-    const o = await runChat({ question: c.question, tools, callModel: callWithRetry, now });
+    console.log(`${NL}EVENTS  ${c.name}`);
+    const printer = makeEventPrinter();
+    const o = await runChat({ question: c.question, tools, callModel: callWithRetry, now, onEvent: printer.onEvent });
+    console.log(printer.summary());
     printTrace(`${c.name}  |  ${c.question}`, o);
 
     const failures = c.check({ o, answer: o.answer, myIds, rows });
     if (o.hitLimit) failures.push("hit MAX_STEPS");
+    // Event-stream checks: done is always last; in --stream mode the answer really arrived as several token events.
+    if (printer.events.at(-1)?.type !== "done") failures.push("last event wasn't done");
+    if (STREAM) {
+      const nTokens = printer.events.filter((e) => e.type === "token").length;
+      if (nTokens < 2) failures.push(`expected several token events when streaming, got ${nTokens}`);
+      if (!printer.tokenText().includes(o.answer)) failures.push("streamed tokens don't add up to the final answer");
+    } else if (printer.events.some((e) => e.type === "token")) failures.push("token events without --stream");
     console.log(failures.length ? `  FAIL\n${failures.map((x) => `    - ${x}`).join("\n")}` : "  PASS");
     allPass &&= failures.length === 0;
   }
@@ -180,13 +234,89 @@ async function runReal(email: string, question: string) {
   if (!user) throw new Error(`No user with email ${email}`);
 
   console.log(`user id ${user.id} (read-only: the tools only run SELECTs)`);
-  const o = await runChat({ question, tools: createChatTools(user.id), callModel: callWithRetry });
+  console.log(`${NL}EVENTS`);
+  const printer = makeEventPrinter();
+  const o = await runChat({ question, tools: createChatTools(user.id), callModel: callWithRetry, onEvent: printer.onEvent });
+  console.log(printer.summary());
   printTrace(question, o);
+}
+
+// ---------- the real NDJSON pipeline (what POST /api/chat sends), real model, in-memory data ----------
+const streamModel = (spy?: { signal?: AbortSignal }): ChatModel => (messages, tools, onToken, signal) => {
+  if (spy) spy.signal = signal;
+  return callGroqChatStream(messages, tools, onToken ?? (() => {}), signal);
+};
+
+/** Runs one turn through createChatStream and prints each NDJSON line with its arrival time. */
+async function ndjsonTurn(history: { role: "user" | "assistant"; content: string }[], question: string, opts: { cancelAfterFirstToken?: boolean } = {}) {
+  const now = new Date();
+  const tools = createFakeTools(baseRows(now), 1, () => now);
+  const spy: { signal?: AbortSignal } = {};
+  const stream = createChatStream({
+    userId: 1,
+    messages: [...history, { role: "user", content: question }],
+    tools,
+    callModel: streamModel(spy),
+    signal: new AbortController().signal,
+  });
+
+  const t0 = Date.now();
+  const reader = stream.getReader();
+  const dec = new TextDecoder();
+  let pending = "";
+  const events: ChatStreamEvent[] = [];
+  let cancelled = false;
+
+  while (!cancelled) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    pending += dec.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = pending.indexOf(NL)) !== -1) {
+      const line = pending.slice(0, nl);
+      pending = pending.slice(nl + 1);
+      const ev = JSON.parse(line) as ChatStreamEvent;
+      events.push(ev);
+      console.log(`  +${String(Date.now() - t0).padStart(5)}ms  ${line}`);
+      if (opts.cancelAfterFirstToken && ev.type === "token") { await reader.cancel(); cancelled = true; break; }
+    }
+  }
+  const answer = events.flatMap((e) => (e.type === "token" ? [e.text] : [])).join("");
+  return { events, answer, upstreamAborted: spy.signal?.aborted };
+}
+
+async function runNdjson(turns: string[]): Promise<boolean> {
+  let ok = true;
+  const history: { role: "user" | "assistant"; content: string }[] = [];
+  for (const q of turns) {
+    console.log(`${NL}USER: ${q}`);
+    const r = await ndjsonTurn(history, q);
+    const last = r.events.at(-1)?.type;
+    console.log(`  => ${r.events.length} event(s), last: ${last}${r.events.some((e) => e.type === "error") ? "  (ERROR EVENT)" : ""}`);
+    if (last !== "done") ok = false;
+    history.push({ role: "user", content: q }, { role: "assistant", content: r.answer });
+  }
+  return ok;
+}
+
+async function runAbort(): Promise<boolean> {
+  console.log(`${NL}ABORT TEST: cancel the stream right after the first token`);
+  const r = await ndjsonTurn([], "Show my React roles", { cancelAfterFirstToken: true });
+  // Give the cancellation a moment to propagate to the fetch signal.
+  await sleep(300);
+  console.log(`  => stopped after ${r.events.length} event(s); upstream Groq request aborted: ${r.upstreamAborted}`);
+  return r.upstreamAborted === true && !r.events.some((e) => e.type === "error" || e.type === "done");
 }
 
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes("--matrix")) process.exit((await runMatrix()) ? 0 : 1);
+  if (args.includes("--abort")) process.exit((await runAbort()) ? 0 : 1);
+  if (args.includes("--ndjson")) {
+    const turns = args.filter((a) => !a.startsWith("--"));
+    if (turns.length === 0) throw new Error('Usage: npm run chat:check -- --ndjson "question 1" ["question 2" ...]');
+    process.exit((await runNdjson(turns)) ? 0 : 1);
+  }
 
   const [email, ...rest] = args.filter((a) => !a.startsWith("--"));
   const question = rest.join(" ").trim();

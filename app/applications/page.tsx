@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listApplications } from "@/lib/applications";
 import { AddApplicationForm } from "@/components/AddApplicationForm";
+import { ChatPanel } from "@/components/ChatPanel";
 import { ApplicationCard } from "@/components/ApplicationCard";
 import { Card } from "@/components/ui/Card";
 import { STATUSES, type Status } from "@/lib/statuses";
@@ -23,6 +24,11 @@ export default function ApplicationsPage() {
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-muted">Add application</h2>
         <AddApplicationForm />
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-muted">Ask about your applications</h2>
+        <ChatPanel />
       </Card>
 
       {/* cacheComponents: cookie + DB access must be inside <Suspense> */}
