@@ -3,7 +3,8 @@ import type { ChatStreamEvent } from "@/lib/chat-stream"; // type-only: no serve
 // Pure client-side chat logic (no React, no fetch): reducer, stream reader, request builder.
 // The ChatPanel component is thin glue around this, so the tricky parts are unit-tested.
 
-export type UiMessage = { role: "user" | "assistant"; content: string };
+/** `failed` marks BOTH halves of a turn that didn't finish (error, dropped connection, Stop): they're shown, but never sent as history. */
+export type UiMessage = { role: "user" | "assistant"; content: string; failed?: boolean };
 
 export type ChatUiState = {
   messages: UiMessage[];
@@ -23,6 +24,7 @@ export const toolStatusLabel = (tool: string): string => TOOL_STATUS[tool] ?? "W
 export type ChatAction =
   | { type: "send"; question: string }
   | { type: "aborted" } // the user pressed Stop
+  | { type: "settled" } // the request is over, however it ended: a safety net that always resets the UI
   | { type: "failed"; message: string } // network / HTTP failure, no stream event
   | ChatStreamEvent;
 
@@ -30,6 +32,17 @@ export type ChatAction =
 const dropEmptyTail = (messages: UiMessage[]): UiMessage[] => {
   const last = messages[messages.length - 1];
   return last && last.role === "assistant" && last.content === "" ? messages.slice(0, -1) : messages;
+};
+
+// Marks the turn that just failed (its question and whatever partial answer exists) so it is
+// excluded from history. Without this, the dangling question plus the NEXT question would be
+// two consecutive user messages in the request.
+const failLastTurn = (messages: UiMessage[]): UiMessage[] => {
+  const out = messages.slice();
+  let i = out.length - 1;
+  if (out[i]?.role === "assistant") { out[i] = { ...out[i], failed: true }; i--; }
+  if (out[i]?.role === "user") out[i] = { ...out[i], failed: true };
+  return dropEmptyTail(out);
 };
 
 export function chatReducer(state: ChatUiState, action: ChatAction): ChatUiState {
@@ -55,31 +68,51 @@ export function chatReducer(state: ChatUiState, action: ChatAction): ChatUiState
     case "done":
       return { ...state, status: null, streaming: false };
     case "error":
-      return { messages: dropEmptyTail(state.messages), status: null, error: action.message, streaming: false };
     case "failed":
-      return { messages: dropEmptyTail(state.messages), status: null, error: action.message, streaming: false };
+      return { messages: failLastTurn(state.messages), status: null, error: action.message, streaming: false };
     case "aborted":
-      return { ...state, messages: dropEmptyTail(state.messages), status: null, streaming: false };
+      return { ...state, messages: failLastTurn(state.messages), status: null, streaming: false };
+    case "settled":
+      return { ...state, status: null, streaming: false };
     default:
       return state; // unknown event types from a newer server are ignored
   }
 }
 
-// The server rejects anything beyond these (see chatRequestSchema).
-export const MAX_REQUEST_MESSAGES = 20;
+// The server rejects a request with more than 20 messages, or any message over 2000 characters
+// (see chatRequestSchema). MAX_MESSAGE_CHARS is that hard limit. MAX_REQUEST_MESSAGES is
+// deliberately LOWER than the server's 20: every message is re-sent (and billed in tokens) on every
+// question, and 20 x 2000 characters is ~10k tokens, more than Groq's free tier allows per minute.
+export const MAX_REQUEST_MESSAGES = 10;
 export const MAX_MESSAGE_CHARS = 2000;
 
 /**
  * What to POST. An assistant answer can be longer than the server's per-message limit, and a
  * failed turn can leave an empty bubble: send those back as-is and the NEXT question gets a 400.
- * So: drop empty messages, keep the last 20, cut each to 2000 characters.
+ * And a failed turn leaves its question without an answer: sent as-is, it would sit next to the next
+ * question as two consecutive user messages. So: drop failed turns and empty messages, keep the last
+ * 10, cut each to 2000 characters.
  */
 export function buildRequestMessages(messages: UiMessage[]): UiMessage[] {
   return messages
+    .filter((m) => !m.failed) // failed turns (both halves) are never sent
     .map((m) => ({ role: m.role, content: m.content.trim() }))
     .filter((m) => m.content !== "")
     .slice(-MAX_REQUEST_MESSAGES)
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_CHARS) }));
+}
+
+export const STICK_THRESHOLD_PX = 40;
+
+/**
+ * Is the user reading the newest text? Auto-scroll should only follow new tokens when this is true.
+ * If they scrolled up to re-read something, leave them alone.
+ */
+export function isNearBottom(
+  el: { scrollHeight: number; scrollTop: number; clientHeight: number },
+  threshold = STICK_THRESHOLD_PX,
+): boolean {
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
 }
 
 /** Network chunks end anywhere. Keeps the unfinished last line until its newline arrives. */

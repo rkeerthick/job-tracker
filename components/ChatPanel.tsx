@@ -4,8 +4,8 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { buildRequestMessages, chatReducer, initialChatState, readChatEvents, type UiMessage } from "@/lib/chat-client";
+import { Textarea } from "@/components/ui/Input";
+import { buildRequestMessages, chatReducer, initialChatState, isNearBottom, readChatEvents, type UiMessage } from "@/lib/chat-client";
 
 /**
  * The message list. Text is rendered as plain React text children: React escapes it, so nothing the
@@ -28,13 +28,13 @@ export function ChatMessageList({ messages, status, streaming }: { messages: UiM
             >
               <span className="sr-only">{m.role === "user" ? "You: " : "Assistant: "}</span>
               {waiting ? (
-                <span className="text-muted">{status ?? "…"}</span>
+                <span className="text-muted" aria-hidden="true">…</span>
               ) : (
                 <p className="whitespace-pre-wrap wrap-break-word">{m.content}</p>
               )}
             </div>
-            {/* While a tool runs (after some text), show the status under the bubble instead of inside it. */}
-            {streaming && isLast && m.role === "assistant" && m.content !== "" && status && (
+            {/* Tool status: dim text under the assistant bubble ("Checking interviews…") */}
+            {streaming && isLast && m.role === "assistant" && status && (
               <p className="mt-1 text-xs text-muted">{status}</p>
             )}
           </li>
@@ -50,12 +50,22 @@ export function ChatPanel({ endpoint = "/api/chat" }: { endpoint?: string }) {
   const [input, setInput] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const wasStreaming = useRef(false);
+  const stickToBottom = useRef(true); // follow new text only while the user is already at the bottom
 
-  // Auto-scroll to the newest text as it streams in.
+  // Auto-scroll to the newest text as it streams in, but NOT if the user scrolled up to read.
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [state.messages, state.status]);
+
+  // When a reply finishes, put the cursor back in the box so the next question can be typed straight away.
+  useEffect(() => {
+    if (wasStreaming.current && !state.streaming) inputRef.current?.focus();
+    wasStreaming.current = state.streaming;
+  }, [state.streaming]);
 
   // Leaving the page cancels the request (and, server-side, the upstream model call).
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -65,6 +75,7 @@ export function ChatPanel({ endpoint = "/api/chat" }: { endpoint?: string }) {
     const question = input.trim();
     if (!question || state.streaming || abortRef.current) return; // one request at a time
 
+    stickToBottom.current = true; // sending a message always jumps to the bottom, to show it and the reply
     const controller = new AbortController();
     abortRef.current = controller;
     const requestMessages = buildRequestMessages([...state.messages, { role: "user", content: question }]);
@@ -99,6 +110,7 @@ export function ChatPanel({ endpoint = "/api/chat" }: { endpoint?: string }) {
       else dispatch({ type: "failed", message: "Network error. Please try again." });
     } finally {
       abortRef.current = null;
+      dispatch({ type: "settled" }); // however the request ended: streaming off, status cleared
     }
   }
 
@@ -108,11 +120,13 @@ export function ChatPanel({ endpoint = "/api/chat" }: { endpoint?: string }) {
         ref={scrollRef}
         role="log"
         aria-live="polite"
+        aria-busy={state.streaming} // while streaming, screen readers wait instead of announcing every token
         aria-label="Conversation"
+        onScroll={(e) => { stickToBottom.current = isNearBottom(e.currentTarget); }}
         className="h-72 overflow-y-auto rounded-md border border-border bg-bg p-3"
       >
         {state.messages.length === 0 ? (
-          <p className="text-sm text-muted">Ask about your applications, e.g. “Which interviews do I have next week?”</p>
+          <p className="text-sm text-muted">Ask about your applications. Try: Which interviews do I have next week?</p>
         ) : (
           <ChatMessageList messages={state.messages} status={state.status} streaming={state.streaming} />
         )}
@@ -120,16 +134,24 @@ export function ChatPanel({ endpoint = "/api/chat" }: { endpoint?: string }) {
 
       {state.error && <Alert>{state.error}</Alert>}
 
-      <form onSubmit={send} className="flex items-start gap-2">
+      <form ref={formRef} onSubmit={send} className="flex items-end gap-2">
         <div className="flex-1">
-          <Input
+          <Textarea
+            ref={inputRef}
             aria-label="Your question"
-            placeholder="Ask a question…"
+            placeholder="Ask a question…  (Enter to send, Shift+Enter for a new line)"
+            rows={2}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter sends, Shift+Enter is a newline. Ignore Enter while an IME is composing (e.g. Tamil/Japanese input).
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                formRef.current?.requestSubmit();
+              }
+            }}
             maxLength={2000}
             disabled={state.streaming}
-            autoComplete="off"
           />
         </div>
         {state.streaming ? (

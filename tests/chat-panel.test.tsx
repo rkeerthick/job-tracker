@@ -21,12 +21,13 @@ describe("ChatMessageList", () => {
     expect(html).toContain("**bold**"); // plain text: markdown is intentionally not rendered
   });
 
-  it("shows the tool status inside the empty assistant bubble while waiting", () => {
+  it("shows the tool status as dim text BELOW the assistant bubble while waiting", () => {
     const html = render([{ role: "user", content: "q" }, { role: "assistant", content: "" }], "Searching your applications…", true);
     expect(html).toContain("Searching your applications…");
+    expect(html).toMatch(/<\/div><p class="[^"]*text-muted[^"]*">Searching your applications…<\/p>/); // a sibling after the bubble, not inside it
   });
 
-  it("shows a placeholder dot when streaming with no status yet", () => {
+  it("shows a placeholder dot in the empty bubble while streaming", () => {
     expect(render([{ role: "user", content: "q" }, { role: "assistant", content: "" }], null, true)).toContain("…");
   });
 

@@ -26,15 +26,15 @@ export default function ApplicationsPage() {
         <AddApplicationForm />
       </Card>
 
-      <Card>
-        <h2 className="mb-3 text-sm font-semibold text-muted">Ask about your applications</h2>
-        <ChatPanel />
-      </Card>
-
       {/* cacheComponents: cookie + DB access must be inside <Suspense> */}
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <Board />
       </Suspense>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-muted">Ask about your applications</h2>
+        <ChatPanel />
+      </Card>
     </div>
   );
 }
