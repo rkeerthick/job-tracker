@@ -11,7 +11,8 @@ export default defineConfig({
   fullyParallel: false, // one shared database: tests run one after another
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: [["list"]],
+  // In CI also write an HTML report (uploaded as an artifact when the job fails).
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   globalTeardown: "./e2e/global-teardown.ts",
   use: { baseURL: "http://localhost:3100", trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
