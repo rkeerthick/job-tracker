@@ -13,7 +13,7 @@ config({ path: ".env.local" });
 
 import { existsSync, readFileSync } from "node:fs";
 import { extractWithRetry } from "../lib/extract-job";
-import { callGroq, withBrokenFirstCall } from "../lib/groq";
+import { callGroq, GroqError, withBrokenFirstCall } from "../lib/groq";
 
 async function readInput(args: string[]): Promise<string> {
   const arg = args.join(" ").trim();
@@ -36,6 +36,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e instanceof Error ? e.message : e);
+  console.error(e instanceof Error ? e.message : e, e instanceof GroqError ? e.detail : "");
   process.exit(2);
 });

@@ -139,7 +139,7 @@ export function NotesPanel({ applicationId }: { applicationId: number }) {
               {notes.map((n) => (
                 <li key={n.id} className="flex items-start justify-between gap-2 text-sm">
                   <div className="min-w-0">
-                    <p className="whitespace-pre-wrap break-words">{n.body}</p>
+                    <p className="whitespace-pre-wrap wrap-break-word">{n.body}</p>
                     <time dateTime={n.createdAt} className="text-xs text-muted">
                       {formatNoteDate(n.createdAt)}
                     </time>

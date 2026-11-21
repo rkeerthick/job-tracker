@@ -37,6 +37,32 @@ describe("createApplicationSchema", () => {
     expect(createApplicationSchema.safeParse({ ...valid, status: "ghosted" }).success).toBe(false);
   });
 
+  it("accepts location, salaryText and skills", () => {
+    const r = createApplicationSchema.safeParse({
+      ...valid, location: "Bengaluru", salaryText: "12-18 LPA", skills: ["React", "TS"],
+    });
+    expect(r.success && r.data).toMatchObject({ location: "Bengaluru", salaryText: "12-18 LPA", skills: ["React", "TS"] });
+  });
+
+  it("treats empty location and salaryText as not provided", () => {
+    const r = createApplicationSchema.safeParse({ ...valid, location: "", salaryText: "   " });
+    expect(r.success && r.data.location).toBeUndefined();
+    expect(r.success && r.data.salaryText).toBeUndefined();
+  });
+
+  it("rejects location or salaryText over 255 chars", () => {
+    expect(createApplicationSchema.safeParse({ ...valid, location: "a".repeat(256) }).success).toBe(false);
+    expect(createApplicationSchema.safeParse({ ...valid, salaryText: "a".repeat(256) }).success).toBe(false);
+  });
+
+  it("rejects more than 30 skills, blank skills, and non-array skills", () => {
+    const many = Array.from({ length: 31 }, (_, i) => `s${i}`);
+    expect(createApplicationSchema.safeParse({ ...valid, skills: many }).success).toBe(false);
+    expect(createApplicationSchema.safeParse({ ...valid, skills: Array.from({ length: 30 }, (_, i) => `s${i}`) }).success).toBe(true);
+    expect(createApplicationSchema.safeParse({ ...valid, skills: ["React", " "] }).success).toBe(false);
+    expect(createApplicationSchema.safeParse({ ...valid, skills: "React" }).success).toBe(false);
+  });
+
   it("drops userId from the parsed output (no spoofing the owner)", () => {
     const r = createApplicationSchema.safeParse({ ...valid, userId: 999 });
     expect(r.success).toBe(true);
