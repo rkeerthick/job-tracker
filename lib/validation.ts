@@ -56,6 +56,30 @@ export const noteSchema = z.object({
     .max(2000, "Note must be at most 2000 characters"),
 });
 
+// POST /api/chat: the conversation so far. Only user/assistant TEXT is accepted: a client can
+// never inject tool or system messages (prompt-injection door). Unknown keys are dropped.
+export const chatRequestSchema = z
+  .object({
+    messages: z
+      .array(
+        z.object({
+          role: z.enum(["user", "assistant"], { error: "role must be user or assistant" }),
+          content: z
+            .string({ error: "content is required" })
+            .trim()
+            .min(1, "Message can't be empty")
+            .max(2000, "Message is too long (max 2000 characters)"),
+        }),
+        { error: "messages must be an array" },
+      )
+      .min(1, "Send at least one message")
+      .max(20, "Too many messages (max 20)"),
+  })
+  .refine((d) => d.messages.at(-1)?.role === "user", {
+    path: ["messages"],
+    error: "The last message must be from the user",
+  });
+
 // POST /api/extract: the job posting text. The upper bound also caps what one request can cost.
 export const extractRequestSchema = z.object({
   text: z

@@ -13,7 +13,17 @@ export type ChatMessage =
 
 export type ModelReply = { content: string | null; tool_calls?: ToolCall[] };
 export type ToolSpec = { name: string; description: string; parameters: object };
-export type ChatModel = (messages: ChatMessage[], tools: ToolSpec[]) => Promise<ModelReply>;
+/** `onToken` is optional: a streaming model calls it with each piece of text; a non-streaming one ignores it. */
+export type ChatModel = (
+  messages: ChatMessage[],
+  tools: ToolSpec[],
+  onToken?: (text: string) => void,
+  /** Aborts the upstream request (the user left): a streaming model should pass it to fetch. */
+  signal?: AbortSignal,
+) => Promise<ModelReply>;
+
+/** Earlier turns of the conversation. Only user/assistant text: a client can never send tool or system messages. */
+export type HistoryMessage = { role: "user" | "assistant"; content: string };
 
 export const MAX_STEPS = 5;
 
@@ -44,6 +54,18 @@ export type TraceEntry = {
   result: unknown;
 };
 
+/**
+ * Progress events for a streaming UI. They carry no tool arguments and no result rows:
+ * only the tool name and how many results came back, which is all a status line needs.
+ * `token` comes from a streaming model (via its onToken); a non-streaming model produces none.
+ * `done` is always the last event of a run, including when the step limit is hit.
+ */
+export type ChatEvent =
+  | { type: "tool_start"; tool: string }
+  | { type: "tool_result"; tool: string; count: number | null } // null = the tool returned an error
+  | { type: "token"; text: string }
+  | { type: "done" };
+
 export type ChatOutcome = {
   answer: string;
   trace: TraceEntry[];
@@ -61,32 +83,49 @@ const parseArgsForTrace = (raw: string): unknown => {
  */
 export async function runChat(opts: {
   question: string;
+  /** Previous turns, oldest first. They go between the system prompt and `question`. */
+  history?: HistoryMessage[];
   tools: Record<ToolName, ChatTool>;
   callModel: ChatModel;
   now?: Date;
   maxSteps?: number;
+  /**
+   * Optional progress listener. Called synchronously, in order, so it must be quick. If it throws
+   * (for example the client disconnected and the stream is closed) the error propagates and stops
+   * the loop: that is intentional, so a dead connection doesn't keep spending model calls.
+   */
+  onEvent?: (event: ChatEvent) => void;
+  /** When it aborts (the client disconnected) the loop stops with the abort error, and the model call is cancelled. */
+  signal?: AbortSignal;
 }): Promise<ChatOutcome> {
-  const { question, tools, callModel, now = new Date(), maxSteps = MAX_STEPS } = opts;
+  const { question, history = [], tools, callModel, now = new Date(), maxSteps = MAX_STEPS, signal } = opts;
+  const emit = opts.onEvent ?? (() => {});
   const specs: ToolSpec[] = Object.values(tools).map(({ name, description, parameters }) => ({ name, description, parameters }));
   const messages: ChatMessage[] = [
     { role: "system", content: buildSystemPrompt(now) },
+    ...history.map((m): ChatMessage => ({ role: m.role, content: m.content })), // copy only role + content
     { role: "user", content: question },
   ];
   const trace: TraceEntry[] = [];
 
   for (let step = 1; step <= maxSteps; step++) {
-    const reply = await callModel(messages, specs);
+    signal?.throwIfAborted();
+    const reply = await callModel(messages, specs, (text) => emit({ type: "token", text }), signal);
 
     if (!reply.tool_calls?.length) {
+      emit({ type: "done" });
       return { answer: (reply.content ?? "").trim(), trace, steps: step, hitLimit: false };
     }
 
     messages.push({ role: "assistant", content: reply.content ?? "", tool_calls: reply.tool_calls });
 
     for (const call of reply.tool_calls) {
+      signal?.throwIfAborted(); // don't start another tool (a database query) for a user who is gone
       const name = call.function.name;
       const tool = (tools as Record<string, ChatTool | undefined>)[name];
       let result: unknown;
+
+      emit({ type: "tool_start", tool: name });
 
       if (!tool) {
         result = { error: `Unknown tool: ${name}` };
@@ -102,6 +141,8 @@ export async function runChat(opts: {
 
       const isError = typeof result === "object" && result !== null && "error" in result;
       const count = !isError && result && typeof result === "object" && "results" in result ? (result as { results: unknown[] }).results.length : null;
+      emit({ type: "tool_result", tool: name, count }); // emitted outside the try/catch above, so a listener error is not reported as "tool failed"
+
       trace.push({
         step, tool: name, args: parseArgsForTrace(call.function.arguments),
         resultCount: count, result,
@@ -112,5 +153,6 @@ export async function runChat(opts: {
     }
   }
 
+  emit({ type: "done" });
   return { answer: "Sorry, I couldn't finish that. Please try a simpler question.", trace, steps: maxSteps, hitLimit: true };
 }
