@@ -47,5 +47,5 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   await createSession(user.id);
 
   // redirect() throws internally, so keep it outside any try/catch.
-  redirect("/");
+  redirect("/applications");
 }

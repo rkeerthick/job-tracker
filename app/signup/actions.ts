@@ -59,5 +59,5 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   await createSession(userId);
 
   // redirect() throws internally, so keep it outside try/catch.
-  redirect("/");
+  redirect("/applications");
 }
