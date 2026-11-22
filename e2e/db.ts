@@ -11,7 +11,7 @@ export async function countUsersByEmail(email: string): Promise<number> {
 
 export async function applicationsOf(email: string) {
   return e2eSql()`
-    SELECT a.company, a.role, a.status
+    SELECT a.company, a.role, a.status, a.location, to_char(a.interview_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') AS "interviewAtUtc"
     FROM applications a JOIN users u ON u.id = a.user_id
     WHERE u.email = ${email}`;
 }

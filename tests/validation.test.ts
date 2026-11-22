@@ -80,9 +80,56 @@ describe("updateApplicationSchema", () => {
     expect(r.success && r.data.link).toBeNull();
   });
 
-  it("drops userId from the parsed output", () => {
-    const r = updateApplicationSchema.safeParse({ status: "offer", userId: 999 });
-    expect(r.success && "userId" in r.data).toBe(false);
+  it("rejects unknown keys (userId, id) instead of dropping them", () => {
+    expect(updateApplicationSchema.safeParse({ status: "offer", userId: 999 }).success).toBe(false);
+    expect(updateApplicationSchema.safeParse({ status: "offer", id: 5 }).success).toBe(false);
+    expect(updateApplicationSchema.safeParse({ createdAt: "2026-01-01" }).success).toBe(false);
+  });
+
+  it("absent = untouched: only the sent keys appear in the output", () => {
+    const r = updateApplicationSchema.safeParse({ status: "offer" });
+    expect(r.success && Object.keys(r.data)).toEqual(["status"]);
+  });
+
+  it("null clears link, location, salaryText and interviewAt; blank text becomes null", () => {
+    const r = updateApplicationSchema.safeParse({ link: null, location: null, salaryText: "  ", interviewAt: null });
+    expect(r.success && r.data).toEqual({ link: null, location: null, salaryText: null, interviewAt: null });
+  });
+
+  it("company, role and status cannot be cleared with null", () => {
+    for (const k of ["company", "role", "status"]) {
+      expect(updateApplicationSchema.safeParse({ [k]: null }).success).toBe(false);
+    }
+  });
+
+  it("an empty body is rejected, but a lone null counts as a field", () => {
+    expect(updateApplicationSchema.safeParse({}).success).toBe(false);
+    expect(updateApplicationSchema.safeParse({ interviewAt: null }).success).toBe(true);
+  });
+
+  describe("interviewAt", () => {
+    const parse = (v: unknown) => updateApplicationSchema.safeParse({ interviewAt: v });
+
+    it("accepts ISO with an offset or Z and returns a Date for the same instant", () => {
+      const a = parse("2026-12-01T10:00:00+05:30");
+      const z = parse("2026-12-01T04:30:00Z");
+      expect(a.success && a.data.interviewAt instanceof Date).toBe(true);
+      expect(a.success && z.success && a.data.interviewAt?.getTime()).toBe(z.success ? z.data.interviewAt?.getTime() : -1);
+    });
+
+    it("rejects strings without an offset, date-only, garbage and non-strings", () => {
+      for (const v of ["2026-12-01T10:00:00", "2026-12-01", "tomorrow", "", 1764583200000, {}]) {
+        expect(parse(v).success).toBe(false);
+      }
+    });
+
+    it("only allows the years 2000-2100", () => {
+      expect(parse("0002-12-01T10:00:00Z").success).toBe(false);
+      expect(parse("1999-12-31T23:59:59Z").success).toBe(false);
+      expect(parse("2101-01-01T00:00:00Z").success).toBe(false);
+      expect(parse("2000-01-01T00:00:00Z").success).toBe(true);
+      expect(parse("2100-12-31T23:59:59Z").success).toBe(true);
+    });
   });
 });
 
@@ -94,5 +141,19 @@ describe("noteSchema", () => {
 
   it("accepts exactly 2000 chars", () => {
     expect(noteSchema.safeParse({ body: "a".repeat(2000) }).success).toBe(true);
+  });
+});
+
+describe("createApplicationSchema interviewAt", () => {
+  const base = { company: "Acme", role: "Dev" };
+  it("accepts an ISO instant (as a Date), null, or nothing", () => {
+    const r = createApplicationSchema.safeParse({ ...base, interviewAt: "2026-11-24T09:30:00.000Z" });
+    expect(r.success && r.data.interviewAt).toEqual(new Date("2026-11-24T09:30:00.000Z"));
+    expect(createApplicationSchema.safeParse({ ...base, interviewAt: null }).success).toBe(true);
+    expect(createApplicationSchema.safeParse(base).success).toBe(true);
+  });
+  it("rejects a local value without an offset and out-of-range years", () => {
+    expect(createApplicationSchema.safeParse({ ...base, interviewAt: "2026-11-24T15:00" }).success).toBe(false);
+    expect(createApplicationSchema.safeParse({ ...base, interviewAt: "0002-11-24T15:00:00Z" }).success).toBe(false);
   });
 });

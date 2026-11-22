@@ -50,4 +50,14 @@ describe("ApplicationCard", () => {
     expect(render({ link: "javascript:alert(1)" })).not.toContain("javascript:");
     expect(render({ link: "data:text/html,<script>alert(1)</script>" })).not.toContain("href=");
   });
+
+  it("shows the interview time in IST and an Edit button", () => {
+    const html = render({ interviewAt: new Date("2026-11-24T09:30:00.000Z") });
+    expect(html).toContain("Interview: Tue, 24 Nov, 3:00 pm");
+    expect(html).toContain('aria-label="Edit Acme"');
+  });
+
+  it("shows no interview line when there is none", () => {
+    expect(render({ interviewAt: null })).not.toContain("Interview:");
+  });
 });

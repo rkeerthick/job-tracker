@@ -4,17 +4,11 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Input, Textarea } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Input";
+import { ApplicationFields, emptyApplicationValues, type ApplicationFormValues } from "@/components/ApplicationFields";
+import { localInputToIso } from "@/lib/datetime-local";
+import { readError } from "@/lib/read-error";
 import { joinSkills, splitSkills } from "@/lib/skills";
-
-type ErrorBody = { error?: string; fieldErrors?: Record<string, string[]> };
-
-// Prefer the first specific field message ("Link must be a valid http(s) URL"), then the API's message.
-async function readError(res: Response, fallback: string): Promise<string> {
-  const body = (await res.json().catch(() => null)) as ErrorBody | null;
-  const firstField = body?.fieldErrors && Object.values(body.fieldErrors).flat()[0];
-  return firstField ?? body?.error ?? fallback;
-}
 
 const MIN_POST_LENGTH = 20; // same minimum as POST /api/extract
 
@@ -22,12 +16,8 @@ export function AddApplicationForm() {
   const router = useRouter();
 
   const [postText, setPostText] = useState("");
-  const [company, setCompany] = useState("");
-  const [role, setRole] = useState("");
-  const [link, setLink] = useState("");
-  const [location, setLocation] = useState("");
-  const [salaryText, setSalaryText] = useState("");
-  const [skillsText, setSkillsText] = useState("");
+  const [values, setValues] = useState<ApplicationFormValues>(emptyApplicationValues);
+  const patchValues = (patch: Partial<ApplicationFormValues>) => setValues((v) => ({ ...v, ...patch }));
 
   // Extract (AI) and Add (save) have their own state, error and disabled logic.
   const [extracting, setExtracting] = useState(false);
@@ -67,12 +57,14 @@ export function AddApplicationForm() {
       const { data } = (await res.json()) as {
         data: { company: string | null; role: string | null; location: string | null; salaryText: string | null; skills: string[] };
       };
-      setCompany(data.company ?? "");
-      setRole(data.role ?? "");
-      setLocation(data.location ?? "");
-      setSalaryText(data.salaryText ?? "");
-      setSkillsText(joinSkills(data.skills));
-      // link is NOT extracted (even if it is in the text): the user types it.
+      // link and interviewAt are NOT extracted: the user types them.
+      patchValues({
+        company: data.company ?? "",
+        role: data.role ?? "",
+        location: data.location ?? "",
+        salaryText: data.salaryText ?? "",
+        skillsText: joinSkills(data.skills),
+      });
     } catch {
       setExtractError("Network error. Please try again.");
     } finally {
@@ -89,12 +81,14 @@ export function AddApplicationForm() {
     setError(null);
 
     try {
-      const skills = splitSkills(skillsText);
+      const { company, role, link, location, salaryText } = values;
+      const skills = splitSkills(values.skillsText);
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Empty strings are treated as "not provided" by the API.
-        body: JSON.stringify({ company, role, link, location, salaryText, ...(skills.length > 0 && { skills }) }),
+        // datetime-local has no zone: convert with the browser's zone to an absolute instant (or null).
+        body: JSON.stringify({ company, role, link, location, salaryText, interviewAt: localInputToIso(values.interviewAt), ...(skills.length > 0 && { skills }) }),
       });
 
       if (!res.ok) {
@@ -103,12 +97,7 @@ export function AddApplicationForm() {
       }
 
       setPostText("");
-      setCompany("");
-      setRole("");
-      setLink("");
-      setLocation("");
-      setSalaryText("");
-      setSkillsText("");
+      setValues(emptyApplicationValues);
       setExtractError(null);
       router.refresh(); // re-run the server component so the new card shows up
     } catch {
@@ -143,14 +132,7 @@ export function AddApplicationForm() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Input label="Company" placeholder="Acme" value={company} onChange={(e) => setCompany(e.target.value)} required disabled={extracting} />
-        <Input label="Role" placeholder="Frontend Developer" value={role} onChange={(e) => setRole(e.target.value)} required disabled={extracting} />
-        <Input label="Link (optional)" placeholder="https://…" value={link} onChange={(e) => setLink(e.target.value)} disabled={extracting} />
-        <Input label="Location" placeholder="Bengaluru" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={255} disabled={extracting} />
-        <Input label="Salary" placeholder="₹12–18 LPA" value={salaryText} onChange={(e) => setSalaryText(e.target.value)} maxLength={255} disabled={extracting} />
-        <Input label="Skills (comma separated)" placeholder="React, TypeScript" value={skillsText} onChange={(e) => setSkillsText(e.target.value)} disabled={extracting} />
-      </div>
+      <ApplicationFields values={values} onChange={patchValues} disabled={extracting} />
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={busy}>

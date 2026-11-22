@@ -53,7 +53,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
     const { data, error: bodyError } = await parseBody(req, updateApplicationSchema);
     if (bodyError) return bodyError;
+    // The schema already requires a field; this guards the route itself, because
+    // db.update().set({}) would produce invalid SQL (a 500, not a 400).
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "Provide at least one field to update" }, { status: 400 });
+    }
 
+    // data.interviewAt is already a Date (the schema converts the ISO string), as Drizzle's timestamp column needs.
     const [updated] = await db
       .update(applications)
       .set(data)

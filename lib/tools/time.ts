@@ -11,6 +11,22 @@ export function formatIST(d: Date): string {
   return IST.format(d);
 }
 
+const INTERVIEW = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** "Mon, 24 Nov, 3:00 pm" in IST, for the board card. Built from parts so the punctuation never depends on the ICU version. */
+export function formatInterviewIST(d: Date): string {
+  const p = Object.fromEntries(INTERVIEW.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.weekday}, ${p.day} ${p.month}, ${p.hour}:${p.minute} ${String(p.dayPeriod).toLowerCase()}`;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**

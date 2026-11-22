@@ -5,6 +5,15 @@ import { STATUSES } from "@/lib/statuses";
 // "" (an empty form field) counts as not provided.
 const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
+// interviewAt: ISO 8601 with an offset ("2026-12-01T10:00:00+05:30" or "...Z"), stored as a Date.
+// Years 2000-2100 only, so a typo like 0002-12-01 or 20260-01-01 is rejected instead of saved.
+const interviewAtSchema = z.iso
+  .datetime({ offset: true, error: "interviewAt must be an ISO date-time with an offset, e.g. 2026-12-01T10:00:00+05:30" })
+  .transform((s) => new Date(s))
+  .refine((d) => d.getUTCFullYear() >= 2000 && d.getUTCFullYear() <= 2100, {
+    error: "interviewAt must be between the years 2000 and 2100",
+  });
+
 export const createApplicationSchema = z.object({
   // trim first so "   " doesn't sneak past min(1); max matches varchar(255)
   company: z.string({ error: "Company is required" }).trim().min(1, "Company is required").max(255),
@@ -24,24 +33,36 @@ export const createApplicationSchema = z.object({
   // Optional list, at most 30. A blank entry is an error (same rule as the extraction schema).
   skills: z.array(z.string().trim().min(1, "Skill can't be blank").max(100)).max(30, "At most 30 skills").optional(),
 
+  // Optional interview time; null = none. See interviewAtSchema above.
+  interviewAt: interviewAtSchema.nullable().optional(),
+
   // Same values as the Postgres enum (both come from lib/statuses.ts); the DB default ("saved") applies when omitted.
   status: z.enum(STATUSES).optional(),
 });
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 
-// PATCH: every field optional, at least one required.
-// link may be null (or "") to clear it.
+// PATCH semantics: a key that is ABSENT (undefined) means "leave it alone"; null means "clear it".
+// Clearable: link, location, salaryText, interviewAt ("" counts as null for the text fields).
+// company, role and status can be changed but never cleared. .strict(): unknown keys (userId, id,
+// createdAt...) are a 400, not silently dropped. At least one field is required.
+const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
+
 export const updateApplicationSchema = z
   .object({
     company: createApplicationSchema.shape.company.optional(),
     role: createApplicationSchema.shape.role.optional(),
     link: z.preprocess(
-      (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+      blankToNull,
       z.url({ protocol: /^https?$/, error: "Link must be a valid http(s) URL" }).nullable().optional(),
     ),
+    location: z.preprocess(blankToNull, z.string().trim().max(255).nullable().optional()),
+    salaryText: z.preprocess(blankToNull, z.string().trim().max(255).nullable().optional()),
+    skills: createApplicationSchema.shape.skills,
+    interviewAt: interviewAtSchema.nullable().optional(),
     status: createApplicationSchema.shape.status,
   })
+  .strict()
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     error: "Provide at least one field to update",
   });
