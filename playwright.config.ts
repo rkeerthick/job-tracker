@@ -14,7 +14,7 @@ export default defineConfig({
   // In CI also write an HTML report (uploaded as an artifact when the job fails).
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   globalTeardown: "./e2e/global-teardown.ts",
-  use: { baseURL: "http://localhost:3100", trace: "on-first-retry" },
+  use: { baseURL: "http://localhost:3100", trace: "on-first-retry", timezoneId: "Asia/Kolkata" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     // A production build, not `next dev`: Next allows only ONE dev server per project folder, so

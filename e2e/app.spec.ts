@@ -19,11 +19,39 @@ test("sign up, add an application, ask the chat", async ({ page }) => {
   await test.step("add an application: it appears in the Saved column", async () => {
     await page.getByLabel("Company", { exact: true }).fill("Acme");
     await page.getByLabel("Role", { exact: true }).fill("Frontend Developer");
+    // datetime-local has no zone: the browser (pinned to India time in playwright.config.ts) must convert to UTC.
+    await page.getByLabel(/^Interview/).fill("2026-11-24T15:00");
     await page.getByRole("button", { name: "Add application" }).click();
 
     const saved = page.getByRole("region", { name: "saved" }); // each board column is a named region
     await expect(saved.getByText("Acme", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Company", { exact: true })).toHaveValue(""); // the form was cleared
+  });
+
+  await test.step("edit: the interview shows in IST, the form pre-fills in local time, changes save, a blank clears", async () => {
+    const saved = page.getByRole("region", { name: "saved" });
+    await expect(saved.getByText("Interview: Tue, 24 Nov, 3:00 pm")).toBeVisible();
+
+    await saved.getByRole("button", { name: "Edit Acme" }).click();
+    const form = page.getByRole("form", { name: "Edit Acme" });
+    await expect(form.getByLabel(/^Interview/)).toHaveValue("2026-11-24T15:00"); // UTC 09:30 shown as local 15:00, not 09:30
+    // Layout regression: every field must stay inside the card (the grid once sized to the inputs' default width and overflowed).
+    const formBox = (await form.boundingBox())!;
+    for (const input of await form.locator("input").all()) {
+      const box = (await input.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(formBox.x + formBox.width + 1);
+    }
+    await form.getByLabel("Location").fill("Chennai");
+    await form.getByRole("button", { name: "Save" }).click();
+    await expect(form).toBeHidden();
+    await expect(saved.getByText("Chennai")).toBeVisible();
+    await expect(saved.getByText("Interview: Tue, 24 Nov, 3:00 pm")).toBeVisible(); // untouched field survived
+
+    await saved.getByRole("button", { name: "Edit Acme" }).click();
+    await page.getByRole("form", { name: "Edit Acme" }).getByLabel(/^Interview/).fill(""); // blank -> null
+    await page.getByRole("form", { name: "Edit Acme" }).getByRole("button", { name: "Save" }).click();
+    await expect(page.getByRole("form", { name: "Edit Acme" })).toBeHidden();
+    await expect(saved.getByText(/^Interview:/)).toHaveCount(0);
   });
 
   await test.step("ask the chat (the model is mocked at the network)", async () => {
@@ -71,6 +99,6 @@ test("sign up, add an application, ask the chat", async ({ page }) => {
 
   await test.step("the app really wrote to the e2e database", async () => {
     expect(await countUsersByEmail(email)).toBe(1);
-    expect(await applicationsOf(email)).toEqual([{ company: "Acme", role: "Frontend Developer", status: "saved" }]);
+    expect(await applicationsOf(email)).toEqual([{ company: "Acme", role: "Frontend Developer", status: "saved", location: "Chennai", interviewAtUtc: null }]);
   });
 });
