@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Tracker: KT Guide</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface2: #eef0f4; --text: #14171f; --muted: #5b6475;
+    --border: #d9dde5; --accent: #4f46e5; --accent-soft: #e8e7fd; --accent-fg: #ffffff;
+    --ok: #0f7b4a; --ok-soft: #dff5ea; --bad: #b42318; --bad-soft: #fde7e4; --warn: #9a6200; --warn-soft: #fdf1d6;
+    --code-bg: #0f1420; --code-fg: #d6deeb; --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c0e13; --surface: #141822; --surface2: #1b2030; --text: #e8ebf2; --muted: #98a2b8;
+      --border: #2a3144; --accent: #8b87ff; --accent-soft: #24244a; --accent-fg: #0c0e13;
+      --ok: #4ade9b; --ok-soft: #12301f; --bad: #ff8a7a; --bad-soft: #3a1815; --warn: #f2c14e; --warn-soft: #382c10;
+      --code-bg: #0a0d14;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0e13; --surface: #141822; --surface2: #1b2030; --text: #e8ebf2; --muted: #98a2b8;
+    --border: #2a3144; --accent: #8b87ff; --accent-soft: #24244a; --accent-fg: #0c0e13;
+    --ok: #4ade9b; --ok-soft: #12301f; --bad: #ff8a7a; --bad-soft: #3a1815; --warn: #f2c14e; --warn-soft: #382c10;
+    --code-bg: #0a0d14;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--sans); }
+  a { color: var(--accent); }
+  code, pre, .mono { font-family: var(--mono); }
+  code { background: var(--surface2); padding: 1px 6px; border-radius: 5px; font-size: .88em; }
+  pre { background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: var(--radius); overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 10px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  h1, h2, h3 { line-height: 1.25; margin: 0 0 .5em; }
+  h1 { font-size: 1.9rem; } h2 { font-size: 1.45rem; } h3 { font-size: 1.08rem; }
+  p { margin: .5em 0 .9em; }
+  ul { margin: .4em 0 .9em; padding-left: 1.25em; } li { margin: .2em 0; }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh; }
+  nav.side { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 20px 14px; border-right: 1px solid var(--border); background: var(--surface); }
+  nav.side .brand { font-weight: 700; margin: 0 8px 14px; }
+  nav.side .brand small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+  nav.side a { display: block; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 14px; }
+  nav.side a:hover { background: var(--surface2); }
+  nav.side a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .theme { margin: 14px 8px 0; font-size: 12px; color: var(--muted); }
+  .theme button { border: 1px solid var(--border); background: var(--surface); border-radius: 6px; padding: 4px 8px; }
+  main { padding: 28px clamp(16px, 4vw, 48px) 80px; max-width: 1100px; }
+  section.page { display: none; }
+  section.page.show { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .lead { font-size: 1.05rem; color: var(--muted); max-width: 70ch; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .grid2 > .card { margin: 0; }
+  .pill { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; margin: 0 4px 4px 0; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 7px 13px; }
+  .btn:hover:not(:disabled) { background: var(--surface2); }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  input[type=text], input[type=datetime-local], select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; width: 100%; color: var(--text); }
+  textarea { font-family: var(--mono); font-size: 13px; resize: vertical; min-height: 130px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  .note.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .note.bad { border-color: var(--bad); background: var(--bad-soft); }
+
+  /* architecture */
+  .arch { display: grid; gap: 10px; }
+  .layer { border: 1px dashed var(--border); border-radius: var(--radius); padding: 10px; }
+  .layer > .ltitle { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  .nodes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .node { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 12px; text-align: left; }
+  .node:hover { border-color: var(--accent); }
+  .node[aria-pressed=true] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .node small { display: block; opacity: .75; font-size: 11px; }
+  .arrow { text-align: center; color: var(--muted); font-size: 12px; }
+  .detail { min-height: 120px; }
+
+  /* flows */
+  .actors { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .actor { border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 13px; background: var(--surface2); color: var(--muted); transition: all .15s; }
+  .actor.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); transform: translateY(-1px); }
+  ol.steps { list-style: none; padding: 0; margin: 10px 0; counter-reset: s; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 8px 10px; border-radius: 8px; opacity: .35; cursor: pointer; }
+  ol.steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--surface2); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  ol.steps li.done { opacity: .85; } ol.steps li.cur { opacity: 1; background: var(--accent-soft); }
+  ol.steps li.cur::before { background: var(--accent); color: var(--accent-fg); }
+  ol.steps .who { font-size: 12px; color: var(--muted); } ol.steps .file { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  ol.steps .lbl { font-weight: 600; }
+
+  /* tree */
+  .tree li { list-style: none; } .tree ul { padding-left: 1em; border-left: 1px solid var(--border); margin-left: 6px; }
+  .frow { display: grid; grid-template-columns: minmax(180px, 280px) 1fr; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .frow .p { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  @media (max-width: 640px) { .frow { grid-template-columns: 1fr; gap: 2px; } }
+
+  /* data model */
+  .tbl { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+  .tbl h3 { margin: 0; padding: 8px 12px; background: var(--surface2); font-family: var(--mono); font-size: 14px; }
+  .tbl .c { display: flex; justify-content: space-between; gap: 10px; padding: 4px 12px; font-size: 13px; border-top: 1px solid var(--border); font-family: var(--mono); }
+  .tbl .c span:last-child { color: var(--muted); text-align: right; }
+  .tbl.hl { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
+  /* chat demo */
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .twocol { grid-template-columns: 1fr; } .shell { grid-template-columns: 1fr; } nav.side { position: static; height: auto; display: flex; flex-wrap: wrap; gap: 4px; border-right: 0; border-bottom: 1px solid var(--border); } nav.side .brand, .theme { width: 100%; } }
+  .stream { background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); padding: 10px 12px; min-height: 220px; max-height: 330px; overflow: auto; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all; }
+  .stream .ev { display: block; } .stream .t { color: #7ee787; } .stream .e { color: #ff9b8f; } .stream .k { color: #79c0ff; }
+  .chatui { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 12px; min-height: 220px; display: flex; flex-direction: column; gap: 8px; }
+  .bub { padding: 8px 12px; border-radius: 12px; max-width: 90%; white-space: pre-wrap; }
+  .bub.u { background: var(--accent); color: var(--accent-fg); align-self: flex-end; }
+  .bub.a { background: var(--surface2); align-self: flex-start; }
+  .status { color: var(--muted); font-size: 13px; font-style: italic; }
+  .resp { font-family: var(--mono); font-size: 13px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+  .s200, .s201 { background: var(--ok-soft); color: var(--ok); } .s400, .s401, .s404, .s500 { background: var(--bad-soft); color: var(--bad); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" aria-label="Sections">
+    <div class="brand">Job Tracker<small>KT guide · interactive</small></div>
+    <a href="#overview">1. Overview</a>
+    <a href="#architecture">2. Architecture</a>
+    <a href="#flows">3. Request flows</a>
+    <a href="#data">4. Data model</a>
+    <a href="#code">5. Code map</a>
+    <a href="#demos">6. Live demos</a>
+    <a href="#quality">7. Quality &amp; security</a>
+    <a href="#ops">8. Deploy &amp; operate</a>
+    <a href="#gotchas">9. Gotchas &amp; decisions</a>
+    <div class="theme">Theme <button id="themeBtn" type="button">Auto</button></div>
+  </nav>
+
+  <main>
+  <!-- ============ 1. OVERVIEW ============ -->
+  <section class="page" id="overview">
+    <h1>Job Tracker</h1>
+    <p class="lead">A personal job-application tracker. Each user keeps their own board of applications (Saved, Applied, Interview, Offer, Rejected), adds notes, schedules interviews, pastes a job posting to have AI pre-fill the form, and asks an AI assistant questions about their own data.</p>
+
+    <div class="grid2">
+      <div class="card"><h3>What a user can do</h3>
+        <ul>
+          <li>Sign up, log in, log out (cookie session, 7 days).</li>
+          <li>Add an application: company, role, link, location, salary, skills, interview time.</li>
+          <li><b>Extract (AI):</b> paste a posting, Groq pre-fills the fields.</li>
+          <li>Move it between stages with the status select; <b>Edit</b> any field on the card.</li>
+          <li>Keep notes per application.</li>
+          <li><b>Ask about your applications:</b> a streaming chat that can search applications and list upcoming interviews.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Tech stack</h3>
+        <p><span class="pill">Next.js 16</span><span class="pill">React 19</span><span class="pill">TypeScript</span><span class="pill">Tailwind</span><span class="pill">Drizzle ORM</span><span class="pill">Neon Postgres</span><span class="pill">Zod 4</span><span class="pill">bcryptjs</span><span class="pill">Groq (gpt-oss-120b)</span><span class="pill">Vitest</span><span class="pill">Playwright</span><span class="pill">GitHub Actions</span><span class="pill">Vercel</span></p>
+        <div class="note warn"><b>Next.js 16 is not the Next you may know.</b> It uses <i>Cache Components</i> (anything that reads cookies or the clock must sit inside <code>&lt;Suspense&gt;</code>) and <code>proxy.ts</code> (the old <code>middleware.ts</code>). Read <code>node_modules/next/dist/docs/</code> before changing framework-level code (see <code>AGENTS.md</code>).</div>
+      </div>
+    </div>
+
+    <div class="card"><h3>The five ideas to remember</h3>
+      <table>
+        <tr><th style="width:30%">Idea</th><th>What it means in this codebase</th></tr>
+        <tr><td><b>1. The server owns identity</b></td><td><code>userId</code> always comes from the session cookie, never from a request body, URL or the AI model. Every query filters by it.</td></tr>
+        <tr><td><b>2. Validate at the edge</b></td><td>Every API body goes through a Zod schema in <code>lib/validation.ts</code> before anything else touches it. Pure files, easy to unit test.</td></tr>
+        <tr><td><b>3. Never leak</b></td><td>Not yours / not found → the same <b>404</b>. Failures → generic messages. Logs never contain passwords, tokens, cookies or user text (<code>lib/log.ts</code>).</td></tr>
+        <tr><td><b>4. The AI is a guest</b></td><td>Model output is validated (extraction), tool results are data not instructions, the model can only call two read-only tools bound to the current user.</td></tr>
+        <tr><td><b>5. Everything testable runs without the network</b></td><td>Model, DB and clock are injected or isolated. Unit tests (Vitest) plus one real-browser e2e (Playwright) on an isolated database.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 2. ARCHITECTURE ============ -->
+  <section class="page" id="architecture">
+    <h1>Architecture</h1>
+    <p class="lead">Click any box to see what lives there, its files and the rules it enforces.</p>
+    <div class="arch" id="arch"></div>
+    <div class="card detail" id="archDetail" aria-live="polite"></div>
+  </section>
+
+  <!-- ============ 3. FLOWS ============ -->
+  <section class="page" id="flows">
+    <h1>Request flows</h1>
+    <p class="lead">Pick a flow, then step through it. The highlighted chips are the parts of the system involved in the current step.</p>
+    <div class="row" id="flowTabs" role="tablist"></div>
+    <div class="card">
+      <div class="actors" id="flowActors"></div>
+      <ol class="steps" id="flowSteps"></ol>
+      <div class="row">
+        <button class="btn" id="flowPrev" type="button">← Back</button>
+        <button class="btn primary" id="flowNext" type="button">Next step →</button>
+        <button class="btn" id="flowAuto" type="button">▶ Auto-play</button>
+        <button class="btn" id="flowReset" type="button">Reset</button>
+      </div>
+    </div>
+    <div class="card detail" id="flowDetail" aria-live="polite"></div>
+  </section>
+
+  <!-- ============ 4. DATA ============ -->
+  <section class="page" id="data">
+    <h1>Data model</h1>
+    <p class="lead">Four tables in Neon Postgres, defined in <code>db/schema.ts</code>. Deleting a user cascades to everything they own. Click a table to see how it is used.</p>
+    <div class="grid2" id="tables"></div>
+    <div class="card detail" id="tableDetail" aria-live="polite"></div>
+    <div class="card"><h3>Migrations</h3>
+      <p>Drizzle generates SQL into <code>drizzle/000N_*.sql</code> (<code>npx drizzle-kit generate</code>). Apply with <code>npx drizzle-kit migrate</code> against the target database. Production, the <code>e2e</code> branch and any test branch are <b>separate Neon branches</b>: migrate each one you use.</p>
+      <div class="note warn">Drizzle decides which migrations to run by comparing the journal's <code>when</code> timestamp. A migration whose timestamp is older than the last applied one is silently skipped. If a migration "ran" but the column is missing, check <code>drizzle/meta/_journal.json</code>.</div>
+    </div>
+  </section>
+
+  <!-- ============ 5. CODE ============ -->
+  <section class="page" id="code">
+    <h1>Code map</h1>
+    <p class="lead">Filter by file name or by what you are looking for (for example <i>cookie</i>, <i>zod</i>, <i>stream</i>).</p>
+    <label class="f" style="max-width:420px">Filter<input type="text" id="treeFilter" placeholder="type to filter…" autocomplete="off"></label>
+    <div class="card" id="fileList"></div>
+  </section>
+
+  <!-- ============ 6. DEMOS ============ -->
+  <section class="page" id="demos">
+    <h1>Live demos</h1>
+    <p class="lead">These are small re-implementations of the real rules, running in your browser. They are meant to build intuition; the real code and its tests are named under each demo.</p>
+
+    <div class="card">
+      <h2>A. API explorer: who answers, and with what?</h2>
+      <p>Pick who is calling and which route. The result shows <b>which layer</b> answered. Ana owns application 5 (with note 9); Bala owns application 6. Real tests: <code>scripts/security-check.ts</code> (checks 1-2).</p>
+      <div class="grid2">
+        <label class="f">Caller (cookie)
+          <select id="exWho">
+            <option value="none">No cookie (logged out)</option>
+            <option value="forged">Forged / expired cookie</option>
+            <option value="ana" selected>Logged in as Ana (user 1)</option>
+            <option value="bala">Logged in as Bala (user 2)</option>
+          </select></label>
+        <label class="f">Request
+          <select id="exReq">
+            <option value="GET /api/applications">GET /api/applications</option>
+            <option value="GET /api/applications/5" selected>GET /api/applications/5 (Ana's)</option>
+            <option value="PATCH /api/applications/5">PATCH /api/applications/5 (Ana's)</option>
+            <option value="DELETE /api/applications/5">DELETE /api/applications/5 (Ana's)</option>
+            <option value="GET /api/applications/6">GET /api/applications/6 (Bala's)</option>
+            <option value="GET /api/applications/999">GET /api/applications/999 (does not exist)</option>
+            <option value="GET /api/applications/abc">GET /api/applications/abc</option>
+            <option value="POST /api/applications/5/notes">POST /api/applications/5/notes</option>
+            <option value="DELETE /api/notes/9">DELETE /api/notes/9 (Ana's note)</option>
+            <option value="POST /api/chat">POST /api/chat</option>
+            <option value="POST /api/extract">POST /api/extract</option>
+          </select></label>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="exSend" type="button">Send request</button></div>
+      <div id="exOut" class="card resp" aria-live="polite"></div>
+    </div>
+
+    <div class="card">
+      <h2>B. PATCH validator: absent vs null, strict, ranges</h2>
+      <p>Edit the JSON body of <code>PATCH /api/applications/5</code>. Rules from <code>updateApplicationSchema</code> in <code>lib/validation.ts</code>. A missing key means "leave it alone"; <code>null</code> means "clear it".</p>
+      <div class="row" id="patchPresets"></div>
+      <textarea id="patchBody" spellcheck="false" aria-label="PATCH body">{
+  "location": null,
+  "interviewAt": "2026-11-24T09:30:00.000Z"
+}</textarea>
+      <div id="patchOut" class="card" aria-live="polite"></div>
+    </div>
+
+    <div class="card">
+      <h2>C. Time zones: the datetime-local trap</h2>
+      <p><code>&lt;input type="datetime-local"&gt;</code> gives a value with <b>no time zone</b> (<code>2026-11-24T15:00</code>). The API needs an absolute instant. We convert with the <i>browser's</i> zone on the way out and back on the way in (<code>lib/datetime-local.ts</code>). Pick a zone to simulate; the demo does the same maths with <code>Intl</code>.</p>
+      <div class="grid2">
+        <label class="f">What the user types (local time)<input type="datetime-local" id="tzInput" value="2026-11-24T15:00"></label>
+        <label class="f">Browser time zone
+          <select id="tzZone">
+            <option>Asia/Kolkata</option><option>UTC</option><option>America/New_York</option><option>Pacific/Auckland</option><option>Asia/Kathmandu</option><option>America/St_Johns</option>
+          </select></label>
+      </div>
+      <div id="tzOut" class="card" aria-live="polite"></div>
+    </div>
+
+    <div class="card">
+      <h2>D. Chat stream: what the browser actually receives</h2>
+      <p><code>POST /api/chat</code> answers with <b>NDJSON</b>: one JSON event per line, flushed as it happens. The UI is a reducer over those events (<code>lib/chat-client.ts</code>). Real code: <code>lib/chat.ts</code> (loop), <code>lib/chat-stream.ts</code> (stream), <code>lib/groq-stream.ts</code> (model).</p>
+      <div class="row">
+        <label class="f" style="min-width:260px">Scenario<select id="chScenario"></select></label>
+        <button class="btn primary" id="chPlay" type="button" style="align-self:flex-end">▶ Play</button>
+      </div>
+      <div class="twocol" style="margin-top:12px">
+        <div><h3>Wire (NDJSON lines)</h3><div class="stream" id="chWire" aria-label="Raw event stream"></div></div>
+        <div><h3>What the user sees</h3><div class="chatui" id="chUi"></div></div>
+      </div>
+      <div class="note" id="chNote"></div>
+    </div>
+  </section>
+
+  <!-- ============ 7. QUALITY ============ -->
+  <section class="page" id="quality">
+    <h1>Quality &amp; security</h1>
+    <div class="grid2">
+      <div class="card"><h3>Test layers</h3>
+        <table>
+          <tr><th>Layer</th><th>Where</th><th>Runs</th></tr>
+          <tr><td>Unit / route tests (Vitest, ~250)</td><td><code>tests/</code></td><td><code>npm test</code> (PowerShell on Windows)</td></tr>
+          <tr><td>E2E (Playwright, real browser)</td><td><code>e2e/</code></td><td><code>npm run e2e</code></td></tr>
+          <tr><td>Model harnesses (real Groq)</td><td><code>scripts/*-check.ts</code></td><td><code>npm run chat:check -- --matrix</code>, <code>npm run extract:check</code></td></tr>
+          <tr><td>Security checks (live server)</td><td><code>scripts/security-check.ts</code></td><td>manual; results in <code>SECURITY.md</code></td></tr>
+        </table>
+      </div>
+      <div class="card"><h3>CI (GitHub Actions)</h3>
+        <p>Two jobs on every PR and push to <code>main</code>:</p>
+        <ul>
+          <li><b>ci:</b> <code>npm ci</code> → typecheck → lint → test → build (dummy <code>DATABASE_URL</code>).</li>
+          <li><b>e2e:</b> installs Chromium, runs Playwright against a built app and the isolated Neon <code>e2e</code> branch (secret <code>E2E_DATABASE_URL</code>); uploads <code>playwright-report/</code> on failure.</li>
+        </ul>
+        <p>Dependabot opens weekly update PRs.</p>
+      </div>
+    </div>
+    <div class="card"><h3>E2E safety: it can never touch real data</h3>
+      <ul>
+        <li><code>playwright.config.ts</code> calls <code>requireE2eDatabaseUrl()</code> first: it throws if <code>E2E_DATABASE_URL</code> is missing, invalid, or points at the same Neon endpoint as <code>DATABASE_URL</code> (pooled and direct hosts are compared after stripping <code>-pooler</code>).</li>
+        <li>The test server is started with <code>DATABASE_URL = E2E_DATABASE_URL</code> and a dummy Groq key; the chat is mocked at the network.</li>
+        <li>Teardown deletes users matching <code>e2e+%</code>. The guard itself has unit tests (<code>tests/e2e-guard.test.ts</code>).</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Security review (v0.2) at a glance</h3>
+      <p>22 checks, each executed, results in <code>SECURITY.md</code>. Tick the ones you want explained:</p>
+      <div id="secList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 8. OPS ============ -->
+  <section class="page" id="ops">
+    <h1>Deploy &amp; operate</h1>
+    <div class="grid2">
+      <div class="card"><h3>Environments</h3>
+        <table>
+          <tr><th>Where</th><th>Database</th><th>Notes</th></tr>
+          <tr><td>Local dev</td><td><code>DATABASE_URL</code> in <code>.env.local</code></td><td>Treat as <b>production data</b>: do not seed or test against it.</td></tr>
+          <tr><td>E2E / CI</td><td>Neon branch <code>e2e</code></td><td><code>E2E_DATABASE_URL</code>; guard refuses the real DB.</td></tr>
+          <tr><td>Vercel (prod)</td><td>production <code>DATABASE_URL</code></td><td>Env vars set in the Vercel project, per environment.</td></tr>
+        </table>
+      </div>
+      <div class="card"><h3>Environment variables</h3>
+        <table>
+          <tr><th>Name</th><th>Used by</th></tr>
+          <tr><td><code>DATABASE_URL</code></td><td>app (<code>db/index.ts</code>), migrations</td></tr>
+          <tr><td><code>GROQ_API_KEY</code></td><td>extract + chat (<code>lib/groq.ts</code>)</td></tr>
+          <tr><td><code>E2E_DATABASE_URL</code></td><td>Playwright only (local <code>.env.local</code> and a GitHub secret)</td></tr>
+        </table>
+        <div class="note bad">Real incident: extraction failed on Vercel with <i>"GROQ_API_KEY is missing"</i> because the key only existed in <code>.env.local</code>. Env changes on Vercel apply only to <b>new deployments</b>: redeploy after adding one.</div>
+      </div>
+    </div>
+    <div class="card"><h3>Commands</h3>
+<pre><code>npm run dev                      # dev server (only ONE per project folder)
+npm test                         # Vitest (run from PowerShell on Windows)
+npm run typecheck &amp;&amp; npm run lint
+npm run e2e                      # needs E2E_DATABASE_URL; builds + starts on :3100
+npx drizzle-kit generate         # create a migration from db/schema.ts
+npx drizzle-kit migrate          # apply to the DATABASE_URL in the environment
+npm run chat:check -- --matrix   # real model, in-memory data, 7 cases
+npm run extract:check            # real model, fixtures incl. prompt injection</code></pre>
+    </div>
+    <div class="card"><h3>Observability</h3>
+      <ul>
+        <li><b>Structured logs:</b> one JSON object per line from <code>lib/log.ts</code> (Vercel → Logs can filter by field). Keys that look sensitive (<code>password</code>, <code>token</code>, <code>cookie</code>, <code>hash</code>, <code>database_url</code>…) are redacted automatically; the rule is still "never pass them in".</li>
+        <li>Chat and extraction log <b>counts only</b> (text length, steps, tool calls), never the question, answer or posting text.</li>
+        <li>Unexpected errors become a generic <code>500 {"error":"Internal server error"}</code> to the client; the detail stays in the log (<code>lib/api-error.ts</code>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 9. GOTCHAS ============ -->
+  <section class="page" id="gotchas">
+    <h1>Gotchas &amp; design decisions</h1>
+    <p class="lead">The "why" behind choices that look odd at first. Click a row to expand.</p>
+    <div id="gotchaList"></div>
+    <div class="card"><h3>Known gaps (be honest in a review)</h3>
+      <ul>
+        <li><b>No rate limiting</b> on login, <code>/api/chat</code> or <code>/api/extract</code>. A correct limit needs shared state (Redis); deferred. Risk accepted for a small friend group.</li>
+        <li>CSP allows inline scripts/styles (Next's bootstrap); a nonce-based CSP would disable prerendering.</li>
+        <li>Sessions are not rotated on login; no "log out everywhere".</li>
+        <li>The card shows the interview in <b>IST</b> while the edit input uses the <b>browser's</b> zone: identical for IST users, different elsewhere.</li>
+        <li>Chat on Groq's free tier is limited to ~8,000 tokens per minute: a busy minute returns the friendly 503 / "AI is busy" message.</li>
+      </ul>
+    </div>
+  </section>
+  </main>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const kid of kids) e.append(kid);
+  return e;
+};
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ---------- routing between pages ---------- */
+const pages = [...document.querySelectorAll("section.page")];
+function show() {
+  const id = (location.hash || "#overview").slice(1);
+  const target = pages.some((p) => p.id === id) ? id : "overview";
+  pages.forEach((p) => p.classList.toggle("show", p.id === target));
+  document.querySelectorAll("nav.side a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + target));
+  window.scrollTo(0, 0);
+}
+addEventListener("hashchange", show); show();
+
+/* ---------- theme ---------- */
+const themes = ["auto", "light", "dark"]; let ti = 0;
+$("#themeBtn").addEventListener("click", () => {
+  ti = (ti + 1) % 3; const t = themes[ti];
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = t;
+  $("#themeBtn").textContent = t[0].toUpperCase() + t.slice(1);
+});
+
+/* ---------- 2. architecture ---------- */
+const ARCH = {
+  browser: { title: "Browser: client components", files: ["components/AddApplicationForm.tsx", "components/EditApplicationForm.tsx", "components/ApplicationFields.tsx", "components/ApplicationCard.tsx", "components/StatusSelect.tsx", "components/NotesPanel.tsx", "components/ChatPanel.tsx", "lib/chat-client.ts", "lib/datetime-local.ts"],
+    body: "Interactive pieces only (<code>\"use client\"</code>). They call the JSON API with <code>fetch</code> and then <code>router.refresh()</code> so server components re-render with fresh data. Rules: a 401 sends the user to <code>/login</code>; error messages come from the API's <code>fieldErrors</code> / <code>error</code>; every button that sends a request is disabled while in flight and guarded with a ref against double submit. Chat state is a pure reducer (<code>chatReducer</code>) over stream events. All text is rendered by React (escaped); there is no <code>dangerouslySetInnerHTML</code>." },
+  proxy: { title: "proxy.ts (the front door)", files: ["proxy.ts", "lib/auth/constants.ts"],
+    body: "Runs before every page and API request. It only checks that a <code>session</code> cookie <b>exists</b>: no cookie → redirect to <code>/login</code> for pages, <code>401 JSON</code> for <code>/api/*</code>. It does <b>not</b> verify the cookie (it cannot cheaply reach the DB). The real check is <code>getCurrentUser()</code> / <code>requireUser()</code> in server code. A forged cookie therefore passes the proxy and is rejected one layer later; this is tested." },
+  pages: { title: "Pages (Server Components)", files: ["app/page.tsx", "app/applications/page.tsx", "app/applications/layout.tsx", "app/login/page.tsx", "app/signup/page.tsx", "components/BoardColumns.tsx"],
+    body: "<code>/</code> only redirects (to <code>/applications</code> or <code>/login</code>). <code>/applications</code> renders the form, the board and the chat panel. Because of Cache Components, anything that reads cookies or the clock (<code>getCurrentUser</code>, <code>listApplications</code>) is wrapped in <code>&lt;Suspense&gt;</code>: the static shell prerenders and the personal data streams in. The board is split into columns by status in <code>BoardColumns</code> (each column is a named landmark region, which the e2e test relies on)." },
+  routes: { title: "Route Handlers (/api/*)", files: ["app/api/applications/route.ts", "app/api/applications/[id]/route.ts", "app/api/applications/[id]/notes/route.ts", "app/api/notes/[noteId]/route.ts", "app/api/extract/route.ts", "app/api/chat/route.ts"],
+    body: "Every handler has the same skeleton: <b>(1)</b> <code>requireUser()</code> → 401, <b>(2)</b> validate id (400), <b>(3)</b> <code>parseBody(request, schema)</code> → 400 with <code>fieldErrors</code>, <b>(4)</b> query with <code>id AND userId</code> → 404 if no row, <b>(5)</b> catch-all → <code>internalError()</code> (generic 500 + a redacted log line)." },
+  actions: { title: "Server Actions (auth)", files: ["app/signup/actions.ts", "app/login/actions.ts", "app/actions.ts"],
+    body: "Signup, login and logout are Server Actions (form posts) rather than JSON routes. Signup/login normalise the email (<code>trim().toLowerCase()</code>), validate, hash/verify with bcrypt and call <code>createSession</code>. Login uses <b>one</b> error text for wrong email and wrong password. All three redirect to <code>/applications</code> (or <code>/login</code> after logout)." },
+  lib: { title: "Domain logic (lib/)", files: ["lib/validation.ts", "lib/auth/*", "lib/applications.ts", "lib/chat.ts", "lib/chat-stream.ts", "lib/extract-job.ts", "lib/extraction.ts", "lib/groq.ts", "lib/groq-stream.ts", "lib/tools/*", "lib/log.ts", "lib/api-error.ts", "lib/parse-body.ts"],
+    body: "Most logic is deliberately <b>pure</b> (no Next, no DB) so tests are fast: Zod schemas, the chat loop (<code>runChat</code> takes the model as a function argument), the NDJSON stream builder, the SSE parser, the extraction retry, the log redactor. Files that touch the DB are thin (<code>lib/applications.ts</code>, <code>lib/tools/*</code>)." },
+  db: { title: "Neon Postgres via Drizzle", files: ["db/index.ts", "db/schema.ts", "drizzle/*.sql", "drizzle.config.ts"],
+    body: "<code>neon-http</code> driver: each query is an HTTPS request, ideal for serverless. Drizzle builds parameterised SQL (no string concatenation anywhere; the only raw SQL is <code>now()</code>). One composite index <code>(user_id, created_at)</code> serves the board and the search tool. Session expiry is compared with the database clock (<code>now()</code>) so the app and DB never disagree." },
+  groq: { title: "Groq API (external)", files: ["lib/groq.ts", "lib/groq-stream.ts"],
+    body: "Model <code>openai/gpt-oss-120b</code>. <b>Extraction:</b> strict <code>json_schema</code> structured output, validated again with Zod, one retry. <b>Chat:</b> tool calling + SSE streaming; tool-call fragments are accumulated per index. A 12-second idle timeout per call; <code>maxDuration</code> 30s (extract) / 60s (chat) on Vercel. The key is server-side only; errors reach the client as a fixed generic message (429 → \"AI is busy, try again in a minute.\")." },
+  vercel: { title: "Vercel + GitHub Actions", files: [".github/workflows/ci.yml", ".github/dependabot.yml", "next.config.ts"],
+    body: "Vercel builds and hosts the app (serverless functions + static shell). <code>next.config.ts</code> sets the security headers (CSP, <code>frame-ancestors 'none'</code>, nosniff, referrer policy, HSTS…). GitHub Actions runs <code>ci</code> and <code>e2e</code>; branch protection can require both." },
+};
+const LAYERS = [
+  ["Client", [["browser", "Browser", "React client components"]]],
+  ["Edge", [["proxy", "proxy.ts", "cookie exists?"]]],
+  ["Next.js server", [["pages", "Pages", "server components"], ["routes", "API routes", "/api/*"], ["actions", "Server Actions", "signup · login · logout"]]],
+  ["Domain", [["lib", "lib/", "validation · auth · chat · tools · log"]]],
+  ["Data & external", [["db", "Neon Postgres", "Drizzle"], ["groq", "Groq API", "LLM"]]],
+  ["Platform", [["vercel", "Vercel + GitHub Actions", "hosting · CI"]]],
+];
+(function buildArch() {
+  const root = $("#arch");
+  LAYERS.forEach(([name, nodes], i) => {
+    const row = el("div", { class: "nodes" });
+    nodes.forEach(([key, title, sub]) => {
+      const b = el("button", { class: "node", type: "button", "aria-pressed": "false", "data-k": key }, document.createTextNode(title), el("small", {}, sub));
+      b.addEventListener("click", () => pickArch(key)); row.append(b);
+    });
+    root.append(el("div", { class: "layer" }, el("div", { class: "ltitle" }, name), row));
+    if (i < LAYERS.length - 2) root.append(el("div", { class: "arrow" }, "↓"));
+  });
+  pickArch("proxy");
+})();
+function pickArch(k) {
+  document.querySelectorAll("#arch .node").forEach((n) => n.setAttribute("aria-pressed", String(n.dataset.k === k)));
+  const a = ARCH[k];
+  $("#archDetail").innerHTML = `<h3>${a.title}</h3><p>${a.body}</p><p>${a.files.map((f) => `<code>${esc(f)}</code>`).join(" ")}</p>`;
+}
+
+/* ---------- 3. flows ---------- */
+const FLOWS = {
+  auth: { name: "Sign up / log in", actors: ["Browser", "proxy.ts", "Server Action", "lib/auth", "Neon DB"], steps: [
+    { who: ["Browser", "proxy.ts"], label: "User submits the signup form", file: "app/signup/signup-form.tsx", detail: "/signup and /login are the only public paths in <code>proxy.ts</code>; everything else needs a cookie. The form posts to a Server Action." },
+    { who: ["Server Action"], label: "Normalise and validate", file: "app/signup/actions.ts", detail: "Email: <code>trim().toLowerCase()</code>, must look like an email. Password: at least 8 characters. Errors are returned to the form (no redirect)." },
+    { who: ["Server Action", "Neon DB"], label: "Reject duplicates, store the user", file: "lib/auth/password.ts", detail: "Existing email → error. Otherwise <code>INSERT users</code> with <code>bcrypt(password, 12)</code>. The plain password is never stored or logged." },
+    { who: ["lib/auth", "Neon DB"], label: "Create a session", file: "lib/auth/session.ts", detail: "<code>randomBytes(32)</code> → hex token. The database stores only <code>sha256(token)</code> plus <code>expiresAt = now + 7 days</code>; a leaked sessions table cannot be replayed." },
+    { who: ["lib/auth", "Browser"], label: "Set the cookie and redirect", file: "lib/auth/session.ts", detail: "<code>session=&lt;raw token&gt;; HttpOnly; Secure (production); SameSite=Lax; Path=/; Expires=7d</code>, then redirect to <code>/applications</code>. Login follows the same path and returns the identical message \"Invalid email or password\" for an unknown email and a wrong password." },
+  ]},
+  page: { name: "Load the board", actors: ["Browser", "proxy.ts", "Page", "lib/auth", "Neon DB"], steps: [
+    { who: ["Browser", "proxy.ts"], label: "GET /applications", file: "proxy.ts", detail: "No <code>session</code> cookie → redirect to <code>/login</code>. A cookie that merely exists is let through (it may be forged or expired)." },
+    { who: ["Page"], label: "Static shell streams immediately", file: "app/applications/page.tsx", detail: "Cache Components: the layout, headings and the add form prerender. The personal part sits inside <code>&lt;Suspense&gt;</code> with a skeleton." },
+    { who: ["Page", "lib/auth", "Neon DB"], label: "getCurrentUser()", file: "lib/auth/session.ts", detail: "Hashes the cookie token and joins <code>sessions → users</code> where <code>expires_at &gt; now()</code>. Wrapped in React <code>cache</code> so one request hits the DB once. No match → redirect to login." },
+    { who: ["Page", "Neon DB"], label: "listApplications(user.id)", file: "lib/applications.ts", detail: "<code>WHERE user_id = ? ORDER BY created_at DESC, id DESC</code>, served by the composite index. Only this user's rows can ever be selected." },
+    { who: ["Page", "Browser"], label: "BoardColumns renders; the stream fills in", file: "components/BoardColumns.tsx", detail: "Five status columns, each a named region with a count. Each card is a client component with Edit, status select and notes." },
+  ]},
+  extract: { name: "Add with AI Extract", actors: ["Browser", "Route", "lib/validation", "Groq", "Neon DB"], steps: [
+    { who: ["Browser"], label: "Paste a posting, press Extract", file: "components/AddApplicationForm.tsx", detail: "The button is enabled only for 20+ characters. One request in flight at a time (ref guard)." },
+    { who: ["Route", "lib/validation"], label: "POST /api/extract: auth first, then validate", file: "app/api/extract/route.ts", detail: "<code>requireUser()</code> runs <b>before</b> anything paid. Body must be <code>{text}</code>, 20 to 20,000 characters, else 400. Logged-out callers never reach the model." },
+    { who: ["Route", "Groq"], label: "Ask the model for structured JSON", file: "lib/groq.ts", detail: "Strict <code>json_schema</code> (company, role, location, salaryText, skills). The posting text is untrusted; the prompt tells the model to ignore instructions inside it. 12s idle timeout." },
+    { who: ["Route", "lib/validation"], label: "Validate the model's output; retry once", file: "lib/extract-job.ts", detail: "Output is parsed and checked with Zod again. Invalid → one retry with the error described. Still invalid → 422 \"Couldn't read this posting\". Provider failure, 429 or timeout → 503 \"AI is busy, try again in a minute.\" Only the text <i>length</i> is logged." },
+    { who: ["Browser"], label: "The form is pre-filled, nothing is saved yet", file: "components/AddApplicationForm.tsx", detail: "The user reviews and edits. <code>link</code> and <code>interviewAt</code> are never extracted: the user types them." },
+    { who: ["Browser", "Route", "lib/validation", "Neon DB"], label: "Add application → POST /api/applications", file: "app/api/applications/route.ts", detail: "<code>createApplicationSchema</code> (company/role 1-255, http(s) link only, skills ≤ 30, <code>interviewAt</code> ISO with offset, years 2000-2100). The browser converted the datetime-local value to UTC first. Insert uses <code>{...data, userId: user.id}</code>: a <code>userId</code> in the body is ignored. → 201, then <code>router.refresh()</code>." },
+  ]},
+  edit: { name: "Edit an application", actors: ["Browser", "Route", "lib/validation", "Neon DB"], steps: [
+    { who: ["Browser"], label: "Press Edit on the card", file: "components/ApplicationCard.tsx", detail: "The card swaps its header for <code>EditApplicationForm</code>. Inputs start from <code>valuesFromApplication(app)</code>: the stored UTC interview is shown in the browser's local time (<code>isoToLocalInput</code>)." },
+    { who: ["Browser"], label: "Save builds a minimal PATCH", file: "lib/application-form.ts", detail: "<code>buildUpdatePayload</code> sends <b>only changed fields</b>. A cleared optional field is <code>null</code> (clear it); skills emptied become <code>[]</code>; an untouched field is left out (leave it). Nothing changed → no request." },
+    { who: ["Route", "lib/validation"], label: "PATCH /api/applications/:id", file: "app/api/applications/[id]/route.ts", detail: "<code>requireUser</code> → id check (400) → <code>updateApplicationSchema</code>: <code>.strict()</code> (unknown keys like <code>userId</code> → 400), at least one field, <code>interviewAt</code> converted to a <code>Date</code>." },
+    { who: ["Route", "Neon DB"], label: "UPDATE … WHERE id = ? AND user_id = ?", file: "app/api/applications/[id]/route.ts", detail: "Both conditions in one statement. No row → <b>404</b> whether the id does not exist or belongs to someone else (never 403, so ids cannot be probed)." },
+    { who: ["Browser"], label: "Success closes the form and refreshes", file: "components/EditApplicationForm.tsx", detail: "401 → <code>/login</code>. Other errors show an Alert and keep the form open with the user's input. While saving, fields and buttons are disabled." },
+  ]},
+  chat: { name: "Ask the chat (streaming)", actors: ["Browser", "Route", "runChat loop", "Groq", "Tools", "Neon DB"], steps: [
+    { who: ["Browser"], label: "Send a question", file: "components/ChatPanel.tsx", detail: "The panel posts the conversation so far (history trimmed: empty messages dropped, last 20, each ≤ 2,000 chars) and reads the response body as a stream." },
+    { who: ["Route"], label: "Auth and validate the history", file: "app/api/chat/route.ts", detail: "<code>chatRequestSchema</code>: roles <b>user/assistant only</b> (a client can never inject <code>tool</code> or <code>system</code> messages), ≤ 20 messages, last must be a user message. Errors here are normal JSON 400/401 (the stream has not opened)." },
+    { who: ["Route", "Tools"], label: "Bind the tools to the session user", file: "lib/tools/index.ts", detail: "<code>createChatTools(user.id)</code>: <code>search_applications</code> and <code>upcoming_interviews</code>. <code>userId</code> is <b>not</b> a parameter the model can supply." },
+    { who: ["runChat loop", "Groq"], label: "Call the model (streaming)", file: "lib/chat.ts", detail: "System prompt (with the current IST date/time) + history + question. Tokens are emitted as <code>token</code> events as they arrive. At most 5 model calls per question." },
+    { who: ["runChat loop", "Tools", "Neon DB"], label: "Model asks for a tool → we run it", file: "lib/tools/search-applications.ts", detail: "Emit <code>tool_start</code>; the tool validates the model's JSON arguments with Zod, runs a parameterised query (<code>ilike</code> wildcards escaped), emit <code>tool_result</code> with a <i>count only</i>. Errors become tool results so the model can correct itself. Then call the model again." },
+    { who: ["runChat loop", "Browser"], label: "Final answer streams, then done", file: "lib/chat-stream.ts", detail: "Each event is one JSON line (NDJSON, <code>no-transform</code> so nothing buffers). Always ends with <code>done</code> or <code>error</code>. The error text is one of two fixed messages. If the user leaves, the abort signal cancels the model call and stops further tools." },
+  ]},
+};
+let flowKey = "auth", flowStep = 0, flowTimer = null;
+function renderFlowTabs() {
+  const tabs = $("#flowTabs"); tabs.innerHTML = "";
+  Object.entries(FLOWS).forEach(([k, f]) => {
+    tabs.append(el("button", { class: "btn" + (k === flowKey ? " primary" : ""), type: "button", role: "tab", "aria-selected": String(k === flowKey), onclick: () => { stopAuto(); flowKey = k; flowStep = 0; renderFlow(); } }, f.name));
+  });
+}
+function renderFlow() {
+  renderFlowTabs();
+  const f = FLOWS[flowKey], s = f.steps[flowStep];
+  $("#flowActors").innerHTML = f.actors.map((a) => `<span class="actor${s.who.includes(a) ? " on" : ""}">${esc(a)}</span>`).join("");
+  const ol = $("#flowSteps"); ol.innerHTML = "";
+  f.steps.forEach((st, i) => ol.append(el("li", { class: i < flowStep ? "done" : i === flowStep ? "cur" : "", onclick: () => { stopAuto(); flowStep = i; renderFlow(); } },
+    el("div", {}, el("div", { class: "lbl" }, st.label), el("div", { class: "who" }, st.who.join(" → "))))));
+  $("#flowDetail").innerHTML = `<h3>Step ${flowStep + 1}: ${esc(s.label)}</h3><p>${s.detail}</p><p><span class="file">${esc(s.file)}</span></p>`;
+  $("#flowPrev").disabled = flowStep === 0; $("#flowNext").disabled = flowStep === f.steps.length - 1;
+}
+function stopAuto() { clearInterval(flowTimer); flowTimer = null; $("#flowAuto").textContent = "▶ Auto-play"; }
+$("#flowPrev").onclick = () => { stopAuto(); flowStep--; renderFlow(); };
+$("#flowNext").onclick = () => { stopAuto(); flowStep++; renderFlow(); };
+$("#flowReset").onclick = () => { stopAuto(); flowStep = 0; renderFlow(); };
+$("#flowAuto").onclick = () => {
+  if (flowTimer) return stopAuto();
+  $("#flowAuto").textContent = "⏸ Pause";
+  if (flowStep >= FLOWS[flowKey].steps.length - 1) flowStep = 0;
+  renderFlow();
+  flowTimer = setInterval(() => { if (flowStep >= FLOWS[flowKey].steps.length - 1) return stopAuto(); flowStep++; renderFlow(); }, 2600);
+};
+renderFlow();
+
+/* ---------- 4. data model ---------- */
+const TABLES = {
+  users: { cols: [["id", "serial PK"], ["email", "varchar(255) unique"], ["password_hash", "text (bcrypt)"], ["created_at", "timestamp"]],
+    info: "One row per account. The email is stored lower-cased. <code>password_hash</code> never leaves the server: queries that feed the UI select only <code>id, email, createdAt</code>. Deleting a user cascades to sessions and applications.", rel: ["sessions", "applications"] },
+  sessions: { cols: [["id", "serial PK"], ["user_id", "FK → users (cascade)"], ["token_hash", "sha256 of the cookie token, unique"], ["expires_at", "timestamptz"]],
+    info: "The cookie holds the random token; only its SHA-256 is stored. Lookup: <code>token_hash = sha256(cookie) AND expires_at &gt; now()</code>. Logout deletes the row, so an old cookie value is a 401 immediately (tested).", rel: ["users"] },
+  applications: { cols: [["id", "serial PK"], ["user_id", "FK → users (cascade)"], ["company, role", "varchar(255) not null"], ["link", "text, http(s) only"], ["location, salary_text", "varchar(255)"], ["skills", "text[]"], ["interview_at", "timestamptz"], ["applied_at", "timestamptz"], ["status", "enum: saved · applied · interview · offer · rejected"], ["created_at", "timestamptz"]],
+    info: "The core table. Every read and write includes <code>user_id</code>. Index <code>applications_user_created_idx (user_id, created_at)</code> serves the board (newest first) and the chat search (found by <code>EXPLAIN</code> on 100k seeded rows on a throwaway branch). The status list lives in one place, <code>lib/statuses.ts</code>, used by both the DB enum and the UI.", rel: ["users", "notes"] },
+  notes: { cols: [["id", "serial PK"], ["application_id", "FK → applications (cascade)"], ["body", "text, ≤ 2,000 chars (API)"], ["created_at", "timestamp"]],
+    info: "Notes have <b>no user_id</b>: ownership is checked through the parent application (a join in <code>DELETE /api/notes/:id</code>, an ownership lookup in the list/create routes). Checking only the note id would let any user delete anyone's note.", rel: ["applications"] },
+};
+(function buildTables() {
+  const root = $("#tables");
+  Object.entries(TABLES).forEach(([name, t]) => {
+    const box = el("div", { class: "tbl", tabindex: "0", role: "button", "data-t": name, onclick: () => pickTable(name), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickTable(name); } } }, el("h3", {}, name));
+    t.cols.forEach(([c, ty]) => box.append(el("div", { class: "c" }, el("span", {}, c), el("span", {}, ty))));
+    root.append(box);
+  });
+  pickTable("applications");
+})();
+function pickTable(name) {
+  const t = TABLES[name];
+  document.querySelectorAll("#tables .tbl").forEach((b) => b.classList.toggle("hl", b.dataset.t === name || t.rel.includes(b.dataset.t)));
+  $("#tableDetail").innerHTML = `<h3>${name}</h3><p>${t.info}</p><p>Related: ${t.rel.map((r) => `<code>${r}</code>`).join(" ")}</p>`;
+}
+
+/* ---------- 5. code map ---------- */
+const FILES = [
+  ["proxy.ts", "Cookie-exists gate: pages redirect to /login, /api returns 401. Not a real auth check."],
+  ["next.config.ts", "Cache Components on; security headers (CSP, X-Frame-Options, nosniff, HSTS, referrer, permissions)."],
+  ["AGENTS.md", "Warning that this Next.js version differs from older docs; read node_modules/next/dist/docs first."],
+  ["SECURITY.md", "The 22-item security review with evidence for each row."],
+  ["app/page.tsx", "Redirect only: / → /applications or /login."],
+  ["app/layout.tsx", "Root layout, fonts, theme."],
+  ["app/globals.css", "Tailwind import and design tokens (colours, dark mode)."],
+  ["app/applications/page.tsx", "Board page: add form, board in Suspense, chat panel."],
+  ["app/applications/layout.tsx", "App shell with header and logout button."],
+  ["app/login/page.tsx · actions.ts · login-form.tsx", "Login UI and Server Action; one generic credential error."],
+  ["app/signup/page.tsx · actions.ts · signup-form.tsx", "Signup UI and Server Action (validate, bcrypt, createSession)."],
+  ["app/actions.ts · logout-button.tsx", "Logout Server Action: deletes the session row and the cookie."],
+  ["app/api/applications/route.ts", "GET list, POST create (createApplicationSchema)."],
+  ["app/api/applications/[id]/route.ts", "GET / PATCH / DELETE one application (id AND userId, 404 otherwise)."],
+  ["app/api/applications/[id]/notes/route.ts", "GET / POST notes (ownership via the parent application)."],
+  ["app/api/notes/[noteId]/route.ts", "DELETE a note (join to check the owner)."],
+  ["app/api/extract/route.ts", "AI extraction: auth, validate, Groq, retry, 422/503 mapping."],
+  ["app/api/chat/route.ts", "Chat: auth, validate history, bind tools, stream NDJSON."],
+  ["components/AddApplicationForm.tsx", "Paste + Extract + fields + submit; one request in flight."],
+  ["components/EditApplicationForm.tsx", "Edit inside the card; sends only changed fields; null clears."],
+  ["components/ApplicationFields.tsx", "Shared inputs (company, role, link, location, salary, skills, interview) for Add and Edit."],
+  ["components/ApplicationCard.tsx", "Card: view mode, interview line (IST), Edit toggle, status select, notes."],
+  ["components/BoardColumns.tsx", "Five named status columns."],
+  ["components/StatusSelect.tsx · NotesPanel.tsx", "Status PATCH; notes list/add/delete."],
+  ["components/ChatPanel.tsx", "Chat UI: stream reader glue around lib/chat-client.ts."],
+  ["components/ui/*", "Button, Input, Textarea, Alert, Card: the small design system."],
+  ["lib/validation.ts", "All Zod schemas: create/update application, note, extract request, chat request. Zod 4."],
+  ["lib/auth/*", "password (bcrypt), token (sha256), session (create/get/destroy), cookie constants, redirect-if-authed."],
+  ["lib/auth.ts (requireUser)", "Route-handler guard: returns the user or a ready-made 401 response."],
+  ["lib/applications.ts", "listApplications(userId) and the Application type."],
+  ["lib/application-form.ts", "valuesFromApplication and buildUpdatePayload (changed fields only, null to clear)."],
+  ["lib/datetime-local.ts", "localInputToIso / isoToLocalInput using the browser's time zone."],
+  ["lib/skills.ts · statuses.ts · read-error.ts · cn.ts", "Small pure helpers: comma split/join, status list, API error text, class names."],
+  ["lib/parse-body.ts · parse-id.ts · api-error.ts", "Shared route plumbing: JSON + Zod → 400, id check, generic 500."],
+  ["lib/log.ts", "Structured JSON logging with key-based redaction and safe error serialisation."],
+  ["lib/groq.ts · groq-stream.ts", "Groq calls: structured output (extract) and streaming tool-calling (chat); SSE parsing."],
+  ["lib/extract-job.ts · extraction.ts", "Extraction prompt, schema, retry and the 'unreadable' check."],
+  ["lib/chat.ts", "runChat: the model/tool loop with events, history, abort, MAX_STEPS=5."],
+  ["lib/chat-stream.ts", "NDJSON stream around runChat; terminal error event; generic client messages."],
+  ["lib/chat-client.ts", "Browser side: reducer, line splitter, stream reader, request builder."],
+  ["lib/tools/*", "search_applications, upcoming_interviews, args (Zod), LIKE escaping, IST time helpers."],
+  ["db/schema.ts · index.ts", "Tables, enum, index; the neon-http Drizzle client."],
+  ["drizzle/*.sql · meta/", "Generated migrations and the journal."],
+  ["tests/*", "~250 Vitest tests: schemas, routes (mocked DB), reducers, stream parsing, tools, guard."],
+  ["e2e/*", "Playwright: spec, DB helper, global teardown, the safety guard (env.ts)."],
+  ["playwright.config.ts", "Guard first, then build+start on :3100 against the e2e DB."],
+  ["scripts/*", "Developer tools: chat-check, extract-check, tools-check, seed-perf, security-check."],
+  [".github/workflows/ci.yml", "Two jobs: ci (typecheck, lint, test, build) and e2e."],
+];
+function renderFiles() {
+  const q = $("#treeFilter").value.trim().toLowerCase();
+  const box = $("#fileList"); box.innerHTML = "";
+  const rows = FILES.filter(([p, d]) => !q || p.toLowerCase().includes(q) || d.toLowerCase().includes(q));
+  if (!rows.length) box.textContent = "No matching files.";
+  rows.forEach(([p, d]) => box.append(el("div", { class: "frow" }, el("div", { class: "p" }, p), el("div", {}, d))));
+}
+$("#treeFilter").addEventListener("input", renderFiles); renderFiles();
+
+/* ---------- 6A. API explorer ---------- */
+const USERS = { ana: { id: 1, name: "Ana" }, bala: { id: 2, name: "Bala" } };
+const APPS = { 5: { owner: 1, company: "Acme" }, 6: { owner: 2, company: "Zepto" } };
+const NOTES = { 9: { app: 5 } };
+function explore(who, req) {
+  const [method, path] = req.split(" ");
+  const trace = [];
+  const done = (status, body, layer, why) => ({ status, body, layer, why, trace });
+  // proxy
+  const hasCookie = who !== "none";
+  if (!hasCookie) {
+    trace.push("proxy.ts: no session cookie → /api requests get 401 JSON");
+    return done(401, { error: "Unauthorized" }, "proxy.ts", "The proxy only checks that a cookie EXISTS.");
+  }
+  trace.push("proxy.ts: cookie present → pass through (it is not verified here)");
+  // requireUser
+  if (who === "forged") {
+    trace.push("requireUser(): sha256(token) not found in sessions (or expired) → 401");
+    return done(401, { error: "Unauthorized" }, "requireUser()", "A forged or expired cookie passes the proxy and is rejected here. Unauthenticated callers never reach the model or the data.");
+  }
+  const me = USERS[who];
+  trace.push(`requireUser(): session found → user ${me.id} (${me.name})`);
+  const parts = path.split("/").filter(Boolean); // api applications 5 notes
+  const bodyStep = () => trace.push("parseBody(): Zod validation (skipped in this demo: assume a valid body)");
+  if (path === "/api/chat") { bodyStep(); trace.push("createChatTools(userId=" + me.id + "): tools are bound to the session user"); return done(200, "application/x-ndjson stream …", "route handler", "The stream opens; the model can only read " + me.name + "'s rows."); }
+  if (path === "/api/extract") { bodyStep(); trace.push("extractWithRetry → Groq (strict JSON schema)"); return done(200, { data: { company: "…", role: "…" } }, "route handler", "Auth happens before the paid model call."); }
+  if (path === "/api/applications") return done(200, `[ ${me.name}'s applications only ]`, "query: WHERE user_id = " + me.id, "listApplications(user.id)");
+  if (parts[0] === "api" && parts[1] === "notes") {
+    const id = Number(parts[2]); const n = NOTES[id];
+    trace.push("query: notes JOIN applications WHERE note.id = " + id + " AND applications.user_id = " + me.id);
+    if (!n || APPS[n.app].owner !== me.id) return done(404, { error: "Not found" }, "query returns no row", "Missing and 'not yours' are indistinguishable: never 403.");
+    return done(200, { id }, "query", "Owner deleted their own note.");
+  }
+  const rawId = parts[2];
+  if (!/^[1-9]\d*$/.test(rawId)) return done(400, { error: "Invalid id" }, "parseId()", "Ids must be positive integers.");
+  const id = Number(rawId); const app = APPS[id];
+  const isNotes = parts[3] === "notes";
+  if (isNotes) {
+    trace.push("ownsApplication(" + id + ", " + me.id + ") runs BEFORE the body is validated");
+  } else trace.push(`query: WHERE id = ${id} AND user_id = ${me.id}`);
+  if (!app || app.owner !== me.id) return done(404, { error: "Not found" }, "query returns no row", "Same 404 whether the id doesn't exist or belongs to another user, so ids can't be probed.");
+  if (method === "GET") return done(200, { id, company: app.company }, "query", "Owner reads their own row.");
+  if (method === "PATCH") { bodyStep(); return done(200, { id, company: app.company, "…": "updated row" }, "query", "UPDATE … WHERE id AND user_id, RETURNING the row."); }
+  if (method === "DELETE") return done(200, { id }, "query", "DELETE … WHERE id AND user_id (notes cascade).");
+  if (method === "POST") { bodyStep(); return done(201, { id: 10, applicationId: id }, "query", "Note created on an application the caller owns."); }
+  return done(405, {}, "-", "");
+}
+$("#exSend").addEventListener("click", () => {
+  const r = explore($("#exWho").value, $("#exReq").value);
+  $("#exOut").innerHTML = `<div><span class="badge s${r.status}">${r.status}</span> <b>answered by:</b> ${esc(r.layer)}</div>
+    <pre><code>${esc(typeof r.body === "string" ? r.body : JSON.stringify(r.body, null, 2))}</code></pre>
+    <ol>${r.trace.map((t) => `<li>${esc(t)}</li>`).join("")}</ol><p>${esc(r.why)}</p>`;
+});
+$("#exSend").click();
+
+/* ---------- 6B. PATCH validator ---------- */
+const PRESETS = {
+  "Clear location + set interview": '{\n  "location": null,\n  "interviewAt": "2026-11-24T09:30:00.000Z"\n}',
+  "Only status": '{ "status": "offer" }',
+  "Unknown key (userId)": '{ "status": "offer", "userId": 999 }',
+  "Empty body": "{}",
+  "Clear company (not allowed)": '{ "company": null }',
+  "Typo year": '{ "interviewAt": "0002-12-01T10:00:00Z" }',
+  "No offset": '{ "interviewAt": "2026-12-01T10:00:00" }',
+  "javascript: link": '{ "link": "javascript:alert(1)" }',
+  "Blank = clear": '{ "link": "", "salaryText": "   " }',
+};
+const ALLOWED = ["company", "role", "link", "location", "salaryText", "skills", "interviewAt", "status"];
+const STATUSES = ["saved", "applied", "interview", "offer", "rejected"];
+function validatePatch(text) {
+  let body; try { body = JSON.parse(text); } catch { return { status: 400, errors: { _: ["Request body must be valid JSON"] } }; }
+  if (body === null || typeof body !== "object" || Array.isArray(body)) return { status: 400, errors: { _: ["Body must be a JSON object"] } };
+  const errors = {}; const out = {}; const add = (k, m) => (errors[k] ||= []).push(m);
+  for (const k of Object.keys(body)) if (!ALLOWED.includes(k)) add("_", `Unrecognized key: "${k}"`);
+  const blank = (v) => (typeof v === "string" && v.trim() === "" ? null : v);
+  for (const k of ALLOWED) {
+    if (!(k in body) || body[k] === undefined) continue;
+    let v = body[k];
+    if (k === "company" || k === "role") {
+      if (typeof v !== "string") { add(k, "Expected a string (cannot be cleared)"); continue; }
+      v = v.trim(); if (!v) add(k, "Required"); else if (v.length > 255) add(k, "At most 255 characters"); else out[k] = v;
+    } else if (k === "link") {
+      v = blank(v); if (v === null) { out[k] = null; continue; }
+      let u = null; try { u = new URL(v); } catch {}
+      if (typeof v !== "string" || !u || !/^https?:$/.test(u.protocol)) add(k, "Link must be a valid http(s) URL"); else out[k] = v;
+    } else if (k === "location" || k === "salaryText") {
+      v = blank(v); if (v === null) out[k] = null; else if (typeof v !== "string") add(k, "Expected a string or null"); else if (v.trim().length > 255) add(k, "At most 255 characters"); else out[k] = v.trim();
+    } else if (k === "skills") {
+      if (!Array.isArray(v)) add(k, "Expected an array"); else if (v.length > 30) add(k, "At most 30 skills"); else if (v.some((s) => typeof s !== "string" || !s.trim() || s.trim().length > 100)) add(k, "Each skill must be 1-100 characters"); else out[k] = v.map((s) => s.trim());
+    } else if (k === "status") {
+      if (!STATUSES.includes(v)) add(k, "Invalid option: expected one of " + STATUSES.join("|")); else out[k] = v;
+    } else if (k === "interviewAt") {
+      if (v === null) { out[k] = null; continue; }
+      if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(v) || isNaN(Date.parse(v))) { add(k, "interviewAt must be an ISO date-time with an offset, e.g. 2026-12-01T10:00:00+05:30"); continue; }
+      const y = new Date(v).getUTCFullYear();
+      if (y < 2000 || y > 2100) add(k, "interviewAt must be between the years 2000 and 2100"); else out[k] = new Date(v);
+    }
+  }
+  if (Object.keys(errors).length) return { status: 400, errors };
+  if (!Object.keys(out).length) return { status: 400, errors: { _: ["Provide at least one field to update"] } };
+  return { status: 200, out };
+}
+function runPatch() {
+  const r = validatePatch($("#patchBody").value);
+  const o = $("#patchOut");
+  if (r.status === 400) {
+    o.innerHTML = `<span class="badge s400">400</span> <b>Invalid request body</b><ul>${Object.entries(r.errors).map(([k, m]) => `<li><code>${esc(k === "_" ? "(body)" : k)}</code>: ${esc(m.join("; "))}</li>`).join("")}</ul><p class="lead">No database call is made.</p>`;
+  } else {
+    const rows = Object.entries(r.out).map(([k, v]) => `<tr><td><code>${k}</code></td><td>${v === null ? '<span class="pill warn">CLEAR → NULL</span>' : '<span class="pill ok">SET</span>'}</td><td><code>${esc(v instanceof Date ? "new Date(\"" + v.toISOString() + "\")" : JSON.stringify(v))}</code></td></tr>`).join("");
+    const untouched = ALLOWED.filter((k) => !(k in r.out)).map((k) => `<code>${k}</code>`).join(" ");
+    $("#patchOut").innerHTML = `<span class="badge s200">200</span> <b>Valid.</b> <code>UPDATE applications SET … WHERE id = 5 AND user_id = &lt;session user&gt;</code><table><tr><th>Column</th><th>Action</th><th>Value</th></tr>${rows}</table><p>Left untouched: ${untouched}</p>`;
+  }
+}
+$("#patchBody").addEventListener("input", runPatch);
+Object.entries(PRESETS).forEach(([n, v]) => $("#patchPresets").append(el("button", { class: "btn", type: "button", onclick: () => { $("#patchBody").value = v; runPatch(); } }, n)));
+runPatch();
+
+/* ---------- 6C. time zones ---------- */
+function partsIn(date, zone) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: zone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(date).map((x) => [x.type, x.value]));
+  return p;
+}
+function zoneOffsetMs(date, zone) { const p = partsIn(date, zone); return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(date.getTime() / 1000) * 1000; }
+// "local wall time in `zone`" -> instant (what the browser does for new Date("2026-11-24T15:00"))
+function localToInstant(value, zone) {
+  const [d, t] = value.split("T"); const [Y, M, D] = d.split("-").map(Number); const [h, m] = t.split(":").map(Number);
+  const guess = Date.UTC(Y, M - 1, D, h, m);
+  let inst = guess - zoneOffsetMs(new Date(guess), zone);
+  inst = guess - zoneOffsetMs(new Date(inst), zone);
+  return new Date(inst);
+}
+function instantToLocalInput(date, zone) { const p = partsIn(date, zone); return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`; }
+function renderTz() {
+  const v = $("#tzInput").value, z = $("#tzZone").value, o = $("#tzOut");
+  if (!v) { o.innerHTML = "Empty input → <code>interviewAt: null</code> (clears the interview)."; return; }
+  const inst = localToInstant(v, z), iso = inst.toISOString();
+  const back = instantToLocalInput(inst, z);
+  const bug = iso.slice(0, 16);
+  const ist = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).formatToParts(inst);
+  const ip = Object.fromEntries(ist.map((x) => [x.type, x.value]));
+  o.innerHTML = `<dl class="kv">
+    <dt>1. Browser value</dt><dd>${esc(v)} <small>(no zone)</small></dd>
+    <dt>2. Sent to the API</dt><dd>interviewAt: "${esc(iso)}" <small>(localInputToIso)</small></dd>
+    <dt>3. Stored in Postgres</dt><dd>timestamptz → the same instant (UTC internally)</dd>
+    <dt>4. Edit form shows</dt><dd>${esc(back)} <small>(isoToLocalInput) ${back === v ? '<span class="pill ok">round trip OK</span>' : '<span class="pill warn">differs: DST gap or ambiguous hour</span>'}</small></dd>
+    <dt>5. Card shows (IST)</dt><dd>Interview: ${esc(`${ip.weekday}, ${ip.day} ${ip.month}, ${ip.hour}:${ip.minute} ${String(ip.dayPeriod).toLowerCase()}`)}</dd>
+  </dl>
+  <div class="note bad"><b>The classic bug:</b> pre-filling the input with <code>iso.slice(0, 16)</code> would show <code>${esc(bug)}</code> (UTC) ${bug === v ? "(same here because the zone is UTC)" : "instead of " + esc(v) + ", silently shifting the time on every save"}.</div>`;
+}
+$("#tzInput").addEventListener("input", renderTz); $("#tzZone").addEventListener("change", renderTz); renderTz();
+
+/* ---------- 6D. chat stream ---------- */
+const SCEN = {
+  plain: { name: "Simple question (no tools)", q: "What can you do?", note: "The model answers directly: only <code>token</code> events, then <code>done</code>.",
+    ev: [{ type: "token", text: "I can search " }, { type: "token", text: "your applications " }, { type: "token", text: "and list upcoming interviews." }, { type: "done" }] },
+  tool: { name: "Uses a tool (interviews)", q: "Which interviews do I have next week?", note: "Two model calls: the first asks for a tool, we run it, the second writes the answer. <code>tool_result</code> carries a <b>count only</b>, never the rows.",
+    ev: [{ type: "tool_start", tool: "upcoming_interviews" }, { type: "tool_result", tool: "upcoming_interviews", count: 1 }, { type: "token", text: "You have 1 interview: " }, { type: "token", text: "Acme on Tue, 24 Nov, 3:00 pm." }, { type: "done" }] },
+  other: { name: "Asks about another user", q: "Show applications of user 2", note: "The tools have no userId parameter: they are bound to the session user. The model can only report that it sees the caller's own data (chat matrix case 5).",
+    ev: [{ type: "tool_start", tool: "search_applications" }, { type: "tool_result", tool: "search_applications", count: 3 }, { type: "token", text: "I can only show your own applications. " }, { type: "token", text: "You have 3 saved." }, { type: "done" }] },
+  retry: { name: "Tool error, model self-corrects", q: "Show my last 50 applications", note: "Invalid tool arguments (limit 50 &gt; 20) become a tool <i>result</i> with an error, not an exception. The model reads it, retries with the allowed value and says which limit it used. <code>count: null</code> means error.",
+    ev: [{ type: "tool_start", tool: "search_applications" }, { type: "tool_result", tool: "search_applications", count: null }, { type: "tool_start", tool: "search_applications" }, { type: "tool_result", tool: "search_applications", count: 12 }, { type: "token", text: "The maximum is 20, so here are your latest 12 " }, { type: "token", text: "(you have 12 in total)." }, { type: "done" }] },
+  busy: { name: "Groq is rate-limited (429)", q: "Anything new?", note: "The raw provider error is logged server-side. The client only ever receives one of two fixed messages, and <code>error</code> is a terminal event.",
+    ev: [{ type: "tool_start", tool: "search_applications" }, { type: "error", message: "AI is busy, try again in a minute." }] },
+};
+const TOOL_STATUS = { search_applications: "Searching your applications…", upcoming_interviews: "Checking interviews…" };
+Object.entries(SCEN).forEach(([k, s]) => $("#chScenario").append(el("option", { value: k }, s.name)));
+let chRun = 0;
+function chReset() {
+  const s = SCEN[$("#chScenario").value];
+  $("#chWire").innerHTML = ""; $("#chUi").innerHTML = ""; $("#chNote").innerHTML = s.note;
+  return s;
+}
+$("#chScenario").addEventListener("change", chReset);
+$("#chPlay").addEventListener("click", async () => {
+  const run = ++chRun; const s = chReset();
+  const ui = $("#chUi"), wire = $("#chWire");
+  ui.append(el("div", { class: "bub u" }, s.q));
+  const bub = el("div", { class: "bub a" }, ""); ui.append(bub);
+  const status = el("div", { class: "status" }); ui.append(status);
+  $("#chPlay").disabled = true;
+  for (const e of s.ev) {
+    await sleep(e.type === "token" ? 260 : 650);
+    if (run !== chRun) return;
+    const cls = e.type === "error" ? "e" : e.type === "token" ? "t" : "k";
+    wire.append(el("span", { class: "ev " + cls }, JSON.stringify(e))); wire.scrollTop = wire.scrollHeight;
+    if (e.type === "tool_start") status.textContent = TOOL_STATUS[e.tool] || "Working…";
+    else if (e.type === "tool_result") status.textContent = "";
+    else if (e.type === "token") { status.textContent = ""; bub.textContent += e.text; }
+    else if (e.type === "error") { status.textContent = ""; if (!bub.textContent) bub.remove(); ui.append(el("div", { class: "bub a", style: "color:var(--bad)", role: "alert" }, e.message)); }
+    else if (e.type === "done") status.textContent = "";
+  }
+  $("#chPlay").disabled = false;
+});
+chReset();
+
+/* ---------- 7. security list ---------- */
+const SEC = [
+  ["1", "Every API route 401 without login", "10 route/method pairs, with no cookie and a forged cookie. The forged one matters because the proxy only checks existence."],
+  ["2", "Ownership: user B → user A's ids → 404", "GET/PATCH/DELETE application, GET/POST notes, DELETE note: all 404, and A's data verified unchanged."],
+  ["3", "Chat: forged history rejected", "tool / system / developer roles, last message from the assistant, empty list → 400; extra fields like tool_calls are stripped."],
+  ["4", "Chat tools only see the caller's rows", "Tools built for B ignore injected userId arguments; the 'show user 2' harness case passes."],
+  ["5", "Cookie flags", "HttpOnly, Secure, SameSite=Lax verified on the production build locally; to be repeated once on the Vercel URL."],
+  ["6", "Logout kills the session", "Old cookie value → 200 before, 401 after; the sessions row is gone."],
+  ["7", "Generic login error", "Wrong password and unknown email show the identical message."],
+  ["8", "No hashes in responses", "70 responses scanned for passwordHash, tokenHash and bcrypt hashes."],
+  ["9", "SQL is parameterised", "grep: one raw sql use, the constant now()."],
+  ["10", "LIKE wildcards escaped", "Searching % matches only a literal %; _ matches nothing."],
+  ["11", "XSS payloads render as text", "img onerror, script, svg onload saved as company names: 0 dialogs, 0 injected elements."],
+  ["12", "javascript: / data: links rejected", "400 on POST and PATCH; the card also renders only http(s) hrefs."],
+  ["13", "Prompt injection", "Extraction fixture with injected instructions and the chat matrix case pass (model-based: re-run after prompt/model changes)."],
+  ["14", "Input size caps", "Extract 20,000 (25,000 → 400), note 2,000, company 255, 30 skills, chat 2,000 × 20."],
+  ["15", "Security headers", "CSP, frame-ancestors none, nosniff, referrer policy, HSTS, permissions policy added in next.config.ts."],
+  ["16", "npm audit", "0 vulnerabilities (omit dev)."],
+  ["17", "Dependabot", "Weekly npm + GitHub Actions updates."],
+  ["18", "No secrets in git", "Only fake gsk_ strings in tests; env files ignored."],
+  ["19", "No secrets in logs", "Redaction by key name; runtime scan of server logs found none of the test credentials."],
+  ["20", "No stack/SQL in error responses", "Unreachable DB → generic 500 body; page contains no host, SQL or stack."],
+  ["21", "Login rate limit", "DEFERRED: needs shared state (Redis); bcrypt cost 12 slows guessing. Risk accepted."],
+  ["22", "Groq failure is friendly", "Wrong key → 503 'AI is busy' / terminal error event; no provider detail."],
+];
+SEC.forEach(([n, t, d]) => {
+  const det = el("details", { style: "border-top:1px solid var(--border); padding:6px 0" });
+  det.append(el("summary", { style: "cursor:pointer" }, `${n}. ${t}`, n === "21" ? el("span", { class: "pill warn", style: "margin-left:8px" }, "deferred") : ""), el("p", { style: "margin:6px 0 2px; color:var(--muted)" }, d));
+  $("#secList").append(det);
+});
+
+/* ---------- 9. gotchas ---------- */
+const GOTCHAS = [
+  ["Why 404 and never 403?", "A 403 tells an attacker the id exists. Returning the same 404 for 'missing' and 'not yours' means ids cannot be enumerated."],
+  ["Why does the proxy not verify the session?", "It runs on every request and cannot cheaply query the database. It is an optimistic gate (cookie exists?). The authoritative check is getCurrentUser()/requireUser() in server code, and every protected route calls it. Never rely on the proxy alone."],
+  ["Why is everything personal wrapped in Suspense?", "Cache Components: reading cookies or the clock during prerender is an error (we hit 'Blocking Route' and 'new Date()' build failures on Vercel). The static shell prerenders; the cookie-dependent part streams. Session expiry therefore uses SQL now() instead of new Date()."],
+  ["Why store only a hash of the session token?", "If the sessions table leaks, hashes cannot be used as cookies. SHA-256 (not bcrypt) is fine because the token is 256 random bits and we need a fast deterministic lookup."],
+  ["Why NDJSON instead of Server-Sent Events or a library?", "One JSON object per line is trivial to emit, to split on the client (with a buffer for chunk boundaries) and to unit test. Headers include no-transform so proxies do not buffer the tokens."],
+  ["Why are tool results sent to the UI as counts only?", "The status line only needs 'a tool ran and found N'. Not shipping rows or arguments to the client avoids leaking data through the progress channel."],
+  ["Why can the chat only use two read-only tools?", "Least privilege: the model can search and list the signed-in user's applications. userId is bound server-side; tool arguments are Zod-validated; nothing can write."],
+  ["Why does PATCH use .strict() while POST strips unknown keys?", "A PATCH is partial, so a typo or a malicious userId silently ignored could hide a bug. Strict makes it a 400. (Create still strips for historical reasons; the DB insert sets userId from the session anyway.)"],
+  ["Why do e2e tests build the app instead of next dev?", "Next allows one dev server per project folder; a dev server on 3100 fails whenever your normal one runs. A production build also matches what CI and Vercel run (and exercises the Secure cookie and the CSP)."],
+  ["Why is the e2e guard comparing Neon endpoint hosts?", "The pooled (-pooler) and direct connection strings of the same database are different strings. Stripping -pooler and comparing hosts stops someone from 'bypassing' the check with the other URL of the real database."],
+  ["datetime-local and time zones", "The input has no zone. We convert with the browser's zone on submit and back when editing. Using toISOString().slice(0,16) for the edit value is the classic off-by-5:30 bug. Precision is a minute; the repeated hour at a daylight-saving change is inherently ambiguous."],
+  ["Windows quirks while developing", "Run Vitest from PowerShell, not Git Bash. Kill dev/start servers by PID (wrapper processes linger). Files edited by scripts must be written as UTF-8 explicitly."],
+];
+GOTCHAS.forEach(([q, a]) => {
+  const d = el("details", { class: "card" });
+  d.append(el("summary", { style: "cursor:pointer; font-weight:600" }, q), el("p", { style: "margin:8px 0 0" }, a));
+  $("#gotchaList").append(d);
+});
+</script>
+</body>
+</html>
